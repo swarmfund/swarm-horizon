@@ -51,6 +51,8 @@ type QInterface interface {
 	Transactions() TransactionsQI
 	TransactionByHash(dest interface{}, hash string) error
 
+	LedgerChanges() LedgerChangesQI
+
 	PaymentRequestByID(dest interface{}, requestID uint64) error
 	PaymentRequestByPaymentID(dest interface{}, requestID uint64) error
 	PaymentRequests() PaymentRequestsQI
