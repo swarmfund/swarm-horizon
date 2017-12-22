@@ -11,7 +11,7 @@ import (
 type LedgerChangesAction struct {
 	Action
 	PagingParams db2.PageQuery
-	Records      []history.TransactionMeta
+	Records      []history.Transaction
 	Page         hal.Page
 }
 
@@ -34,11 +34,11 @@ func (action *LedgerChangesAction) loadParams() {
 }
 
 func (action *LedgerChangesAction) checkAllowed() {
-	//action.IsAllowed("")
+	action.IsAllowed("")
 }
 
 func (action *LedgerChangesAction) loadRecords() {
-	action.Err = action.HistoryQ().LedgerChanges().
+	action.Err = action.HistoryQ().Transactions().
 		Page(action.PagingParams).
 		Select(&action.Records)
 }

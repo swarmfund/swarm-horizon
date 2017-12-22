@@ -20,7 +20,7 @@ func (lc LedgerChanges) PagingToken() string {
 	return lc.PT
 }
 
-func (lc *LedgerChanges) Populate(tm history.TransactionMeta) error {
+func (lc *LedgerChanges) Populate(tm history.Transaction) error {
 	lc.ID = fmt.Sprintf("%d", tm.ID)
 	lc.Ledger = tm.LedgerSequence
 	lc.PT = tm.PagingToken()
