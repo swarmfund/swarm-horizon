@@ -1,9 +1,8 @@
 package resource
 
 import (
-	"time"
-
 	"fmt"
+	"time"
 
 	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2/history"
@@ -38,8 +37,9 @@ func (lc *LedgerChanges) Populate(tm history.TransactionMeta) error {
 	for _, opMeta := range txMeta.MustOperations() {
 		for _, xdrChange := range opMeta.Changes {
 			res := LedgerEntryChange{}
-			res.Populate(xdrChange)
-			lc.Changes = append(lc.Changes, res)
+			if res.Populate(xdrChange) {
+				lc.Changes = append(lc.Changes, res)
+			}
 		}
 	}
 
@@ -47,28 +47,34 @@ func (lc *LedgerChanges) Populate(tm history.TransactionMeta) error {
 }
 
 type LedgerEntryChange struct {
-	Type    xdr.LedgerEntryChangeType `json:"type"`
-	Created *LedgerEntry              `json:"created"`
-	Updated *LedgerEntry              `json:"updated"`
-	Removed *LedgerKey                `json:"removed"`
-	State   *LedgerEntry              `json:"state"`
+	TypeI   int32        `json:"type_i"`
+	Type    string       `json:"type"`
+	Created *LedgerEntry `json:"created"`
+	Updated *LedgerEntry `json:"updated"`
+	Removed *LedgerKey   `json:"removed"`
+	State   *LedgerEntry `json:"state"`
 }
 
-func (r *LedgerEntryChange) Populate(xdrChange xdr.LedgerEntryChange) {
-	r.Type = xdrChange.Type
+func (r *LedgerEntryChange) Populate(xdrChange xdr.LedgerEntryChange) bool {
+	r.TypeI = int32(xdrChange.Type)
+	r.Type = xdrChange.Type.ShortString()
 
+	var ok bool
 	switch xdrChange.Type {
 	case xdr.LedgerEntryChangeTypeCreated:
 		r.Created = &LedgerEntry{}
-		r.Created.Populate(xdrChange.Created)
+		ok = r.Created.Populate(xdrChange.MustCreated())
 	case xdr.LedgerEntryChangeTypeUpdated:
 		r.Updated = &LedgerEntry{}
-		r.Updated.Populate(xdrChange.Updated)
+		ok = r.Updated.Populate(xdrChange.MustUpdated())
 	case xdr.LedgerEntryChangeTypeRemoved:
 		r.Removed = &LedgerKey{}
-		r.Removed.Populate(xdrChange.Removed)
+		ok = r.Removed.Populate(xdrChange.MustRemoved())
 	case xdr.LedgerEntryChangeTypeState:
 		r.State = &LedgerEntry{}
-		r.State.Populate(xdrChange.State)
+		ok = r.State.Populate(xdrChange.MustState())
+	default:
+		return false
 	}
+	return ok
 }

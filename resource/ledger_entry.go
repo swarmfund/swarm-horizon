@@ -3,48 +3,59 @@ package resource
 import "gitlab.com/swarmfund/go/xdr"
 
 type LedgerEntry struct {
-	LastModifiedLedgerSeq uint32
-	Type                  xdr.LedgerEntryType `json:"type"`
-	Account               *AccountEntry
-	Asset                 *AssetEntry
-	Balance               *BalanceEntry
+	LastModifiedLedgerSeq uint32        `json:"last_modified_ledger_seq"`
+	TypeI                 int32         `json:"type_i"`
+	Type                  string        `json:"type"`
+	Account               *AccountEntry `json:"account"`
+	Asset                 *AssetEntry   `json:"asset"`
+	Balance               *BalanceEntry `json:"balance"`
 }
 
-func (r *LedgerEntry) Populate(xdrEntry *xdr.LedgerEntry) {
-	r.Type = xdrEntry.Data.Type
-	r.LastModifiedLedgerSeq = uint32(xdrEntry.LastModifiedLedgerSeq)
+func (r *LedgerEntry) Populate(entry xdr.LedgerEntry) bool {
+	r.TypeI = int32(entry.Data.Type)
+	r.Type = entry.Data.Type.ShortString()
+	r.LastModifiedLedgerSeq = uint32(entry.LastModifiedLedgerSeq)
 
-	switch r.Type {
+	switch entry.Data.Type {
 	case xdr.LedgerEntryTypeAccount:
 		r.Account = new(AccountEntry)
-		r.Account.Populate(*xdrEntry.Data.Account)
+		r.Account.Populate(entry.Data.MustAccount())
 	case xdr.LedgerEntryTypeAsset:
 		r.Asset = new(AssetEntry)
-		r.Asset.Populate(*xdrEntry.Data.Asset)
+		r.Asset.Populate(entry.Data.MustAsset())
 	case xdr.LedgerEntryTypeBalance:
 		r.Balance = new(BalanceEntry)
-		r.Balance.Populate(*xdrEntry.Data.Balance)
+		r.Balance.Populate(entry.Data.MustBalance())
+	default:
+		return false
 	}
-
+	return true
 }
 
 type LedgerKey struct {
-	Type    xdr.LedgerEntryType `json:"type"`
-	Account *LedgerKeyAccount   `json:"account"`
-	Asset   *LedgerKeyAsset     `json:"asset"`
-	Balance *LedgerKeyBalance   `json:"balance"`
+	TypeI   int32             `json:"type_i"`
+	Type    string            `json:"type"`
+	Account *LedgerKeyAccount `json:"account"`
+	Asset   *LedgerKeyAsset   `json:"asset"`
+	Balance *LedgerKeyBalance `json:"balance"`
 }
 
-func (r *LedgerKey) Populate(ledgerKey *xdr.LedgerKey) {
-	switch r.Type {
+func (r *LedgerKey) Populate(ledgerKey xdr.LedgerKey) bool {
+	r.TypeI = int32(ledgerKey.Type)
+	r.Type = ledgerKey.Type.ShortString()
+
+	switch ledgerKey.Type {
 	case xdr.LedgerEntryTypeAccount:
 		r.Account = new(LedgerKeyAccount)
-		r.Account.Populate(*ledgerKey.Account)
+		r.Account.Populate(ledgerKey.MustAccount())
 	case xdr.LedgerEntryTypeAsset:
 		r.Asset = new(LedgerKeyAsset)
-		r.Asset.Populate(*ledgerKey.Asset)
+		r.Asset.Populate(ledgerKey.MustAsset())
 	case xdr.LedgerEntryTypeBalance:
 		r.Balance = new(LedgerKeyBalance)
-		r.Balance.Populate(*ledgerKey.Balance)
+		r.Balance.Populate(ledgerKey.MustBalance())
+	default:
+		return false
 	}
+	return true
 }

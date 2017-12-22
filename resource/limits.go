@@ -22,7 +22,7 @@ func (s *Limits) Populate(row core.Limits) {
 	s.AnnualOut = amount.String(row.AnnualOut)
 }
 
-func (s *Limits) FromXDR(row *xdr.Limits) {
+func (s *Limits) FromXDR(row xdr.Limits) {
 	s.DailyOut = amount.String(int64(row.DailyOut))
 	s.WeeklyOut = amount.String(int64(row.WeeklyOut))
 	s.MonthlyOut = amount.String(int64(row.MonthlyOut))

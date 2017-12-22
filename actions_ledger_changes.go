@@ -34,7 +34,7 @@ func (action *LedgerChangesAction) loadParams() {
 }
 
 func (action *LedgerChangesAction) checkAllowed() {
-	action.IsAllowed("")
+	//action.IsAllowed("")
 }
 
 func (action *LedgerChangesAction) loadRecords() {

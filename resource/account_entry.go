@@ -28,11 +28,14 @@ func (r *AccountEntry) Populate(entry xdr.AccountEntry) {
 	r.AccountType = entry.AccountType.String()
 	r.BlockReasonsI = uint32(entry.BlockReasons)
 	r.BlockReasons = base.FlagFromXdrBlockReasons(int32(entry.BlockReasons), xdr.BlockReasonsAll)
-	r.Limits.FromXDR(entry.Limits)
+
 	r.Policies.Populate(int32(entry.Policies))
 	r.Referrer = entry.Referrer.Address()
 	r.Thresholds.Populate(entry.Thresholds)
 
+	if entry.Limits != nil {
+		r.Limits.FromXDR(*entry.Limits)
+	}
 	r.Signers = make([]Signer, 0)
 	for _, xSigner := range entry.Signers {
 		sgn := Signer{}
