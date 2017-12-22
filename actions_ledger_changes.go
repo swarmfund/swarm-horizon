@@ -56,8 +56,9 @@ func (action *LedgerChangesAction) loadPage() {
 			action.Err = &problem.ServerError
 			return
 		}
-
-		action.Page.Add(res)
+		if len(res.Changes) > 0 {
+			action.Page.Add(res)
+		}
 	}
 
 	action.Page.BaseURL = action.BaseURL()
