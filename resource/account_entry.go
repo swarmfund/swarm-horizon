@@ -6,7 +6,7 @@ import (
 )
 
 type AccountEntry struct {
-	AccountId     string            `json:"account_id"`
+	AccountID     string            `json:"account_id"`
 	AccountTypeI  int32             `json:"account_type_i"`
 	AccountType   string            `json:"account_type"`
 	BlockReasonsI uint32            `json:"block_reasons_i"`
@@ -19,11 +19,11 @@ type AccountEntry struct {
 }
 
 type LedgerKeyAccount struct {
-	AccountId string `json:"account_id"`
+	AccountID string `json:"account_id"`
 }
 
 func (r *AccountEntry) Populate(entry xdr.AccountEntry) {
-	r.AccountId = entry.AccountId.Address()
+	r.AccountID = entry.AccountId.Address()
 	r.AccountTypeI = int32(entry.AccountType)
 	r.AccountType = entry.AccountType.String()
 	r.BlockReasonsI = uint32(entry.BlockReasons)
@@ -46,5 +46,5 @@ func (r *AccountEntry) Populate(entry xdr.AccountEntry) {
 }
 
 func (r *LedgerKeyAccount) Populate(xdrAcc xdr.LedgerKeyAccount) {
-	r.AccountId = xdrAcc.AccountId.Address()
+	r.AccountID = xdrAcc.AccountId.Address()
 }
