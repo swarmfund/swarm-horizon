@@ -65,6 +65,9 @@ type QInterface interface {
 
 	Trades() TradesQI
 
+	// Sales - returns query builder for sales
+	Sales() SalesQ
+
 	// ReviewableRequests - provides builder of request to access reviewable requests
 	ReviewableRequests() ReviewableRequestQI
 }
