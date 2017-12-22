@@ -38,9 +38,13 @@ func (action *LedgerChangesAction) checkAllowed() {
 }
 
 func (action *LedgerChangesAction) loadRecords() {
-	action.Err = action.HistoryQ().Transactions().
+	err := action.HistoryQ().Transactions().
 		Page(action.PagingParams).
 		Select(&action.Records)
+	if err != nil {
+		action.Log.WithError(err).Error("failed to load transaction records")
+		action.Err = &problem.ServerError
+	}
 }
 
 func (action *LedgerChangesAction) loadPage() {
