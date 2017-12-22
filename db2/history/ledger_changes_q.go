@@ -6,10 +6,10 @@ import (
 )
 
 var selectTransactionMeta = sq.Select(
-	"ht.id, " +
-		"ht.ledger_sequence, " +
-		"ht.tx_meta, " +
-		"ht.ledger_close_time").
+	"ht.id",
+	"ht.ledger_sequence",
+	"ht.tx_meta",
+	"ht.ledger_close_time").
 	From("history_transactions ht")
 
 // LedgerChangesQ is a helper struct to aid in configuring queries that loads
@@ -22,7 +22,7 @@ type LedgerChangesQ struct {
 
 type LedgerChangesQI interface {
 	Page(page db2.PageQuery) LedgerChangesQI
-	Select(dest interface{}) error
+	Select(dest *[]TransactionMeta) error
 }
 
 // LedgerChanges provides a helper to filter rows from the `history_transactions`
@@ -46,7 +46,7 @@ func (q *LedgerChangesQ) Page(page db2.PageQuery) LedgerChangesQI {
 }
 
 // Select loads the results of the query specified by `q` into `dest`.
-func (q *LedgerChangesQ) Select(dest interface{}) error {
+func (q *LedgerChangesQ) Select(dest *[]TransactionMeta) error {
 	if q.Err != nil {
 		return q.Err
 	}

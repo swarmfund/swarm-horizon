@@ -4,6 +4,7 @@ import (
 	"gitlab.com/swarmfund/horizon/db2"
 	"gitlab.com/swarmfund/horizon/db2/history"
 	"gitlab.com/swarmfund/horizon/render/hal"
+	"gitlab.com/swarmfund/horizon/render/problem"
 	"gitlab.com/swarmfund/horizon/resource"
 )
 
@@ -45,7 +46,12 @@ func (action *LedgerChangesAction) loadRecords() {
 func (action *LedgerChangesAction) loadPage() {
 	for _, record := range action.Records {
 		var res resource.LedgerChanges
-		res.Populate(record)
+		if err := res.Populate(record); err != nil {
+			action.Log.WithError(err).Error("failed to populate ledger changes")
+			action.Err = &problem.ServerError
+			return
+		}
+
 		action.Page.Add(res)
 	}
 
