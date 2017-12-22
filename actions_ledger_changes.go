@@ -44,6 +44,7 @@ func (action *LedgerChangesAction) loadRecords() {
 	if err != nil {
 		action.Log.WithError(err).Error("failed to load transaction records")
 		action.Err = &problem.ServerError
+		return
 	}
 }
 

@@ -1,15 +1,17 @@
 package resource
 
 import (
+	"encoding/json"
+
 	"gitlab.com/swarmfund/go/amount"
 	"gitlab.com/swarmfund/go/xdr"
 )
 
 type AssetEntry struct {
-	Code     string   `json:"code"`
-	Owner    string   `json:"owner"`
-	Details  string   `json:"description"`
-	Policies Policies `json:"policies"`
+	Code     string                 `json:"code"`
+	Owner    string                 `json:"owner"`
+	Details  map[string]interface{} `json:"details"`
+	Policies Policies               `json:"policies"`
 
 	PreissuedAssetSigner  string `json:"preissued_asset_signer"`
 	AvailableForIssueance string `json:"available_for_issueance"`
@@ -20,7 +22,9 @@ type AssetEntry struct {
 func (r *AssetEntry) Populate(entry xdr.AssetEntry) {
 	r.Code = string(entry.Code)
 	r.Owner = entry.Owner.Address()
-	r.Details = string(entry.Details)
+	r.Details = make(map[string]interface{})
+	// entry.Details is user data and we doesn't care about if it's not valid
+	json.Unmarshal([]byte(entry.Details), &r.Details)
 
 	r.Policies.PopulateFromInt32(int32(entry.Policies))
 	r.PreissuedAssetSigner = entry.PreissuedAssetSigner.Address()

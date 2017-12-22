@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"gitlab.com/distributed_lab/logan/v3"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2/history"
 )
@@ -29,10 +31,13 @@ func (lc *LedgerChanges) Populate(tm history.Transaction) error {
 	txMeta := xdr.TransactionMeta{}
 	err := xdr.SafeUnmarshalBase64(tm.TxMeta, &txMeta)
 	if err != nil {
-		return err
+		return errors.Wrap(err,
+			"failed to unmarshal tx_meta",
+			logan.F{
+				"id":                tm.ID,
+				"ledger_close_time": tm.LedgerCloseTime,
+			})
 	}
-
-	lc.Changes = make([]LedgerEntryChange, 0)
 
 	for _, opMeta := range txMeta.MustOperations() {
 		for _, xdrChange := range opMeta.Changes {

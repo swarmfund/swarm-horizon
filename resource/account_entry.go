@@ -13,7 +13,6 @@ type AccountEntry struct {
 	BlockReasons  []base.Flag       `json:"block_reasons"`
 	Limits        *Limits           `json:"limits"`
 	Policies      AccountPolicies   `json:"policies"`
-	Referrer      string            `json:"referrer"`
 	Signers       []Signer          `json:"signers"`
 	Thresholds    AccountThresholds `json:"thresholds"`
 }
@@ -30,7 +29,6 @@ func (r *AccountEntry) Populate(entry xdr.AccountEntry) {
 	r.BlockReasons = base.FlagFromXdrBlockReasons(int32(entry.BlockReasons), xdr.BlockReasonsAll)
 
 	r.Policies.Populate(int32(entry.Policies))
-	r.Referrer = entry.Referrer.Address()
 	r.Thresholds.Populate(entry.Thresholds)
 
 	if entry.Limits != nil {
