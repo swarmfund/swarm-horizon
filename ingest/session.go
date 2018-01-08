@@ -96,31 +96,12 @@ func (is *Session) ingestLedger() {
 		is.ingestTransaction()
 	}
 
-	is.priceHistory()
-
 	is.Ingested++
 	if is.Metrics != nil {
 		is.Metrics.IngestLedgerTimer.Update(time.Since(start))
 	}
 
 	return
-}
-
-func (is *Session) priceHistory() {
-	if is.Err != nil {
-		return
-	}
-
-	priceHistory, err := is.Cursor.PriceHistoryProvider().ToPricePoints()
-	if err != nil {
-		is.Err = err
-		return
-	}
-
-	err = is.Ingestion.StorePricePoints(priceHistory)
-	if err != nil {
-		is.Err = errors.Wrap(err, "failed to store price points")
-	}
 }
 
 func (is *Session) storeTrades(orderBookID uint64, result xdr.ManageOfferSuccessResult) {

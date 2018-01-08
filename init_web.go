@@ -179,7 +179,6 @@ func initWebActions(app *App) {
 
 	// assets
 	r.Get("/charts/:code", &ChartsAction{})
-	r.Get("/prices/history", &PricesHistoryAction{})
 	r.Get("/assets", &AssetsIndexAction{})
 	r.Get("/assets/:code", &AssetsShowAction{})
 	r.Get("/asset_pairs", &AssetPairsAction{})

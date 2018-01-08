@@ -67,7 +67,6 @@ type LedgerBundle struct {
 	Header              core.LedgerHeader
 	TransactionFees     []core.TransactionFee
 	Transactions        []core.Transaction
-	HistoryPriceProvide *PriceHistoryProvider
 }
 
 // System represents the data ingestion subsystem of horizon.

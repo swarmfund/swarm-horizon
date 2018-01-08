@@ -26,5 +26,4 @@ type Ingestion struct {
 	payment_requests         sq.InsertBuilder
 	balances                 sq.InsertBuilder
 	trades                   sq.InsertBuilder
-	priceHistory             sq.InsertBuilder
 }

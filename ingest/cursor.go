@@ -3,11 +3,12 @@ package ingest
 import (
 	"time"
 
+	"database/sql"
+
+	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2/core"
 	"gitlab.com/swarmfund/horizon/toid"
-	"gitlab.com/distributed_lab/logan/v3/errors"
-	"database/sql"
 )
 
 // InLedger returns true if the cursor is on a ledger.
@@ -32,10 +33,6 @@ func (c *Cursor) InTransaction() bool {
 // Ledger returns the current ledger
 func (c *Cursor) Ledger() *core.LedgerHeader {
 	return &c.data.Header
-}
-
-func (c *Cursor) PriceHistoryProvider() *PriceHistoryProvider {
-	return c.data.HistoryPriceProvide
 }
 
 // LedgerID returns the current ledger's id, as used by the history system.

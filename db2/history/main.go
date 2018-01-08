@@ -54,13 +54,6 @@ type QInterface interface {
 	PaymentRequestByID(dest interface{}, requestID uint64) error
 	PaymentRequestByPaymentID(dest interface{}, requestID uint64) error
 	PaymentRequests() PaymentRequestsQI
-
-	// PendingTransactions
-
-	// prices history
-	PriceHistory(base, quote string, since time.Time) ([]PricePoint, error)
-	LastPrice(base, quote string) (*PricePoint, error)
-
 	Trades() TradesQI
 
 	// Sales - returns query builder for sales

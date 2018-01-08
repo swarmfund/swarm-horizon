@@ -300,8 +300,6 @@ func (ingest *Ingestion) createInsertBuilders() {
 		"created_at",
 	)
 
-	ingest.priceHistory = sq.Insert("history_price").Columns("base_asset", "quote_asset", "timestamp", "price")
-
 	ingest.payment_requests = sq.Insert("history_payment_requests").Columns(
 		"payment_id",
 		"exchange",
