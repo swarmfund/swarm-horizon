@@ -102,6 +102,18 @@ func New(
 			e.ExternalDetails = nil
 		}
 		result = e
+	case xdr.OperationTypePayout:
+		e := Payout{Base: base}
+		err = row.UnmarshalDetails(&e)
+		if public {
+			e.Asset = ""
+			e.SourceBalanceID = ""
+			e.MaxPayoutAmount = ""
+			e.ActualPayoutAmount = ""
+			e.FixedFee = ""
+			e.PercentFee = ""
+		}
+		result = e
 	default:
 		result = base
 	}

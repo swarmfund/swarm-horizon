@@ -48,9 +48,9 @@ func ForOperation(
 		result = append(result, Participant{paymentResponse.Destination, &paymentOp.DestinationBalanceId, nil})
 		sourceParticipant.BalanceID = &paymentOp.SourceBalanceId
 	case xdr.OperationTypeSetOptions:
-	// the only direct participant is the source_account
+		// the only direct participant is the source_account
 	case xdr.OperationTypeSetFees:
-	// the only direct participant is the source_account
+		// the only direct participant is the source_account
 	case xdr.OperationTypeManageAccount:
 		manageAccountOp := op.Body.MustManageAccountOp()
 		result = append(result, Participant{manageAccountOp.Account, nil, nil})
@@ -63,9 +63,9 @@ func ForOperation(
 			result = append(result, Participant{manageBalanceOp.Destination, nil, nil})
 		}
 	case xdr.OperationTypeReviewPaymentRequest:
-	// the only direct participant is the source_account
+		// the only direct participant is the source_account
 	case xdr.OperationTypeManageAsset:
-	// the only direct participant is the source_accountWWW
+		// the only direct participant is the source_accountWWW
 	case xdr.OperationTypeSetLimits:
 		setLimitsOp := op.Body.MustSetLimitsOp()
 		if setLimitsOp.Account != nil {
@@ -117,6 +117,19 @@ func ForOperation(
 		result = addMatchParticipants(result, saleClosed.SaleOwner, saleClosed.SaleBaseBalance,
 			saleClosed.SaleQuoteBalance, false, &saleClosed.SaleDetails)
 		sourceParticipant = nil
+	case xdr.OperationTypePayout:
+		payoutOp := op.Body.MustPayoutOp()
+		sourceParticipant.BalanceID = &payoutOp.SourceBalanceId
+
+		payoutResponses := opResult.MustPayoutResult().MustPayoutSuccessResult().PayoutResponses
+		if payoutResponses == nil {
+			break
+		}
+		for _, response := range payoutResponses {
+
+			result = append(result, addPaymentResponse(response.ReceiverId, response.ReceiverBalanceId,
+				response.ReceivedAmount))
+		}
 	default:
 		err = fmt.Errorf("unknown operation type: %s", op.Body.Type)
 	}
@@ -147,6 +160,12 @@ func addMatchParticipants(participants []Participant, offerSourceID xdr.AccountI
 	}
 
 	return matchesByBalance.ToParticipants(participants)
+}
+
+func addPaymentResponse(receiverID xdr.AccountId, receiverBalanceID xdr.BalanceId,
+	receivedAmount xdr.Uint64) Participant {
+	payoutResponse := NewPayoutResponse(receiverID, receiverBalanceID, receivedAmount)
+	return payoutResponse.ToParticipant()
 }
 
 // ForTransaction returns all the participating accounts from the provided
