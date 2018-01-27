@@ -15,27 +15,36 @@ import (
 // operationDetails returns the details regarding the current operation, suitable
 // for ingestion into a history_operation row
 func (is *Session) operationDetails() history.OperationDetails {
-	c := is.Cursor
-	source := c.OperationSourceAccount()
+	source := is.Cursor.OperationSourceAccount()
+	return setOperationDetails(
+		source.Address(),
+		is.Cursor.Operation().Body,
+		is.Cursor.OperationResult(),
+	)
+}
+
+func setOperationDetails(source string, operation xdr.OperationBody,
+	result *xdr.OperationResultTr) history.OperationDetails {
 
 	operationDetails := history.OperationDetails{
-		Type: c.OperationType(),
+		Type: operation.Type,
 	}
+
 	switch operationDetails.Type {
 	case xdr.OperationTypeCreateAccount:
-		op := c.Operation().Body.MustCreateAccountOp()
+		op := operation.MustCreateAccountOp()
 		operationDetails.CreateAccount = &history.CreateAccountDetails{
-			Funder:      source.Address(),
+			Funder:      source,
 			Account:     op.Destination.Address(),
 			AccountType: int32(op.AccountType),
 		}
 	case xdr.OperationTypePayment:
-		op := c.Operation().Body.MustPaymentOp()
-		opResult := c.OperationResult().MustPaymentResult()
+		op := operation.MustPaymentOp()
+		opResult := result.MustPaymentResult()
 
 		operationDetails.Payment = &history.PaymentDetails{
 			BasePayment: history.BasePayment{
-				From:                  source.Address(),
+				From:                  source,
 				To:                    opResult.PaymentResponse.Destination.Address(),
 				FromBalance:           op.SourceBalanceId.AsString(),
 				ToBalance:             op.DestinationBalanceId.AsString(),
@@ -52,7 +61,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			QuoteAsset: string(opResult.PaymentResponse.Asset),
 		}
 	case xdr.OperationTypeSetOptions:
-		op := c.Operation().Body.MustSetOptionsOp()
+		op := operation.MustSetOptionsOp()
 
 		if op.MasterWeight != nil {
 			operationDetails.SetOptions.MasterKeyWeight = (*uint32)(op.MasterWeight)
@@ -78,7 +87,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			operationDetails.SetOptions.LimitsUpdateRequestDocumentHash = hex.EncodeToString(op.LimitsUpdateRequestData.DocumentHash[:])
 		}
 	case xdr.OperationTypeSetFees:
-		op := c.Operation().Body.MustSetFeesOp()
+		op := operation.MustSetFeesOp()
 
 		if op.Fee != nil {
 			var accountID *string
@@ -107,7 +116,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			}
 		}
 	case xdr.OperationTypeManageAccount:
-		op := c.Operation().Body.MustManageAccountOp()
+		op := operation.MustManageAccountOp()
 
 		operationDetails.ManageAccount = &history.ManageAccountDetails{
 			Account:              op.Account.Address(),
@@ -115,7 +124,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			BlockReasonsToRemove: uint32(op.BlockReasonsToRemove),
 		}
 	case xdr.OperationTypeCreateWithdrawalRequest:
-		op := c.Operation().Body.MustCreateWithdrawalRequestOp()
+		op := operation.MustCreateWithdrawalRequestOp()
 		request := op.Request
 
 		var externalDetails map[string]interface{}
@@ -132,7 +141,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			DestAmount:      amount.StringU(uint64(request.Details.AutoConversion.ExpectedAmount)),
 		}
 	case xdr.OperationTypeManageBalance:
-		op := c.Operation().Body.MustManageBalanceOp()
+		op := operation.MustManageBalanceOp()
 
 		//added new struct in resource/main.go and in OperationDetails
 		operationDetails.ManageBalance = &history.ManageBalanceDetails{
@@ -140,7 +149,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			Action:      int32(op.Action),
 		}
 	case xdr.OperationTypeReviewPaymentRequest:
-		op := c.Operation().Body.MustReviewPaymentRequestOp()
+		op := operation.MustReviewPaymentRequestOp()
 
 		var rejectReason *string
 		if op.RejectReason != nil {
@@ -153,21 +162,23 @@ func (is *Session) operationDetails() history.OperationDetails {
 			RejectReason: rejectReason,
 		}
 	case xdr.OperationTypeSetLimits:
-		op := c.Operation().Body.MustSetLimitsOp()
+		op := operation.MustSetLimitsOp()
 
-		var accountType *int32
-		if op.AccountType != nil {
-			accountType = (*int32)(op.AccountType)
+		operationDetails.SetLimits = &history.SetLimitsDetails{
+			AccountType: nil,
+			Account:     op.Account.Address(),
 		}
 
-		operationDetails.SetLimits.AccountType = accountType
-		operationDetails.SetLimits.Account = op.Account.Address()
+		if accountType := op.AccountType; accountType != nil {
+			operationDetails.SetLimits.AccountType = (*int32)(accountType)
+		}
+
 	case xdr.OperationTypeDirectDebit:
-		op := c.Operation().Body.MustDirectDebitOp().PaymentOp
-		opResult := c.OperationResult().MustDirectDebitResult().MustSuccess()
+		op := operation.MustDirectDebitOp().PaymentOp
+		opResult := result.MustDirectDebitResult().MustSuccess()
 
 		operationDetails.DirectDebit = &history.DirectDebitDetails{
-			From:                  source.Address(),
+			From:                  source,
 			To:                    opResult.PaymentResponse.Destination.Address(),
 			FromBalance:           op.SourceBalanceId.AsString(),
 			ToBalance:             op.DestinationBalanceId.AsString(),
@@ -182,7 +193,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			AssetCode:             string(opResult.PaymentResponse.Asset),
 		}
 	case xdr.OperationTypeManageAssetPair:
-		op := c.Operation().Body.MustManageAssetPairOp()
+		op := operation.MustManageAssetPairOp()
 
 		operationDetails.ManageAssetPair = &history.ManageAssetPairDetails{
 			BaseAsset:               string(op.Base),
@@ -193,7 +204,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			Policies:                int32(op.Policies),
 		}
 	case xdr.OperationTypeManageOffer:
-		op := c.Operation().Body.ManageOfferOp
+		op := operation.ManageOfferOp
 
 		operationDetails.ManagerOffer = &history.ManagerOfferDetails{
 			IsBuy:     op.IsBuy,
@@ -204,8 +215,8 @@ func (is *Session) operationDetails() history.OperationDetails {
 			IsDeleted: int64(op.OfferId) != 0,
 		}
 	case xdr.OperationTypeManageInvoice:
-		op := c.Operation().Body.MustManageInvoiceOp()
-		opResult := c.OperationResult().MustManageInvoiceResult()
+		op := operation.MustManageInvoiceOp()
+		opResult := result.MustManageInvoiceResult()
 
 		operationDetails.ManageInvoice = &history.ManageInvoiceDetails{
 			Amount:          amount.String(int64(op.Amount)),
@@ -215,7 +226,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			Asset:           string(opResult.Success.Asset),
 		}
 	case xdr.OperationTypeReviewRequest:
-		op := c.Operation().Body.MustReviewRequestOp()
+		op := operation.MustReviewRequestOp()
 
 		operationDetails.ReviewRequest = &history.ReviewRequestDetails{
 			Action:      int32(op.Action),
@@ -225,7 +236,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 			RequestType: int32(op.RequestDetails.RequestType),
 		}
 	case xdr.OperationTypeManageAsset:
-		op := c.Operation().Body.MustManageAssetOp()
+		op := operation.MustManageAssetOp()
 
 		operationDetails.ManageAsset = &history.ManageAssetDetails{
 			RequestID: uint64(op.RequestId),
@@ -234,7 +245,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 	case xdr.OperationTypeCreatePreissuanceRequest:
 		// no details needed
 	case xdr.OperationTypeCreateIssuanceRequest:
-		op := c.Operation().Body.MustCreateIssuanceRequestOp()
+		op := operation.MustCreateIssuanceRequestOp()
 
 		var externalDetails map[string]interface{}
 		// error is ignored on purpose, we should not block ingest in case of such error
@@ -254,7 +265,7 @@ func (is *Session) operationDetails() history.OperationDetails {
 	case xdr.OperationTypeCheckSaleState:
 		// no details needed
 	default:
-		panic(fmt.Errorf("Unknown operation type: %s", c.OperationType()))
+		panic(fmt.Errorf("Unknown operation type: %s", operation.Type))
 	}
 	return operationDetails
 }
