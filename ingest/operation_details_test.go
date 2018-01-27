@@ -9,7 +9,9 @@ import (
 
 func TestSetOperationDetails(t *testing.T) {
 	source := "GCFXHS4GXL6BVUCXBWXGTITROWLVYXQKQLF4YH5O5JT3YZXCYPAFBJZB"
+
 	accountType := xdr.AccountTypeGeneral
+
 	temp := [32]byte{
 		1, 2, 3, 4, 5,
 		6, 7, 8, 9, 10,
@@ -20,7 +22,17 @@ func TestSetOperationDetails(t *testing.T) {
 		27, 28, 29, 30,
 		31,
 	}
+
 	edd25519 := xdr.Uint256(temp)
+
+	var temp0 uint32 = 5
+
+	masterKeyWeight := xdr.Uint32(temp0)
+
+	var temp1 uint32 = 5
+
+	highThreshold := xdr.Uint32(temp1)
+
 	cases := []struct {
 		name      string
 		operation xdr.OperationBody
@@ -83,6 +95,39 @@ func TestSetOperationDetails(t *testing.T) {
 			result: xdr.OperationResultTr{
 				Type: xdr.OperationTypeSetFees,
 				SetFeesResult: &xdr.SetFeesResult{
+					Code:    5,
+					Success: nil,
+				},
+			},
+		},
+		{
+			name: "SetOptions",
+			operation: xdr.OperationBody{
+				Type: xdr.OperationTypeSetOptions,
+				SetOptionsOp: &xdr.SetOptionsOp{
+					MasterWeight:  &masterKeyWeight,
+					LowThreshold:  nil,
+					MedThreshold:  nil,
+					HighThreshold: &highThreshold,
+					Signer: &xdr.Signer{
+						PubKey: xdr.AccountId{
+							Type:    0,
+							Ed25519: &edd25519,
+						},
+						Weight:     0,
+						SignerType: 0,
+						Identity:   0,
+						Name:       "Signer Name",
+						Ext:        xdr.SignerExt{},
+					},
+					TrustData:               nil,
+					LimitsUpdateRequestData: nil,
+					Ext: xdr.SetOptionsOpExt{},
+				},
+			},
+			result: xdr.OperationResultTr{
+				Type: 0,
+				SetOptionsResult: &xdr.SetOptionsResult{
 					Code:    5,
 					Success: nil,
 				},
