@@ -63,6 +63,8 @@ func setOperationDetails(source string, operation xdr.OperationBody,
 	case xdr.OperationTypeSetOptions:
 		op := operation.MustSetOptionsOp()
 
+		operationDetails.SetOptions = &history.SetOptionsDetails{}
+
 		if op.MasterWeight != nil {
 			operationDetails.SetOptions.MasterKeyWeight = (*uint32)(op.MasterWeight)
 		}
