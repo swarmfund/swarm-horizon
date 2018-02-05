@@ -28,10 +28,7 @@ func TestSetOperationDetails(t *testing.T) {
 	var temp0 uint32 = 5
 
 	masterKeyWeight := xdr.Uint32(temp0)
-
-	var temp1 uint32 = 5
-
-	highThreshold := xdr.Uint32(temp1)
+	highThreshold := xdr.Uint32(temp0)
 
 	cases := []struct {
 		name      string
