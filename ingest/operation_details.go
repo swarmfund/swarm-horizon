@@ -224,7 +224,7 @@ func setOperationDetails(source string, operation xdr.OperationBody,
 			Amount:          amount.String(int64(op.Amount)),
 			ReceiverBalance: op.ReceiverBalance.AsString(),
 			Sender:          op.Sender.Address(),
-			InvoiceID:       uint64(opResult.Success.InvoiceId),
+			InvoiceID:       int64(opResult.Success.InvoiceId),
 			Asset:           string(opResult.Success.Asset),
 		}
 	case xdr.OperationTypeReviewRequest:
