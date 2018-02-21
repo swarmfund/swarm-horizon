@@ -20,9 +20,10 @@ func New(
 		return
 	}
 
+	details := row.Details
 	switch row.Type {
 	case xdr.OperationTypeCreateAccount:
-		d := row.GetDetails().CreateAccount
+		d := details.CreateAccount
 		e := CreateAccount{
 			Base:        base,
 			Funder:      d.Funder,
@@ -35,7 +36,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypePayment:
-		d := row.GetDetails().Payment
+		d := details.Payment
 		e := Payment{
 			Base: base,
 			BasePayment: BasePayment{
@@ -65,7 +66,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeSetOptions:
-		d := row.GetDetails().SetOptions
+		d := details.SetOptions
 		e := SetOptions{
 			Base:                            base,
 			MasterKeyWeight:                 d.MasterKeyWeight,
@@ -77,7 +78,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeSetFees:
-		d := row.GetDetails().SetFees
+		d := details.SetFees
 		e := SetFees{
 			Base: base,
 			Fee: &Fee{
@@ -94,7 +95,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeManageAccount:
-		d := row.GetDetails().ManageAccount
+		d := details.ManageAccount
 		e := ManageAccount{
 			Base:                 base,
 			Account:              d.Account,
@@ -106,7 +107,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeCreateWithdrawalRequest:
-		d := row.GetDetails().CreateWithdrawalRequest
+		d := details.CreateWithdrawalRequest
 		e := CreateWithdrawalRequest{
 			Base:            base,
 			Amount:          d.Amount,
@@ -123,7 +124,7 @@ func New(
 		result = e
 
 	case xdr.OperationTypeManageBalance:
-		d := row.GetDetails().ManageBalance
+		d := details.ManageBalance
 
 		e := ManageBalance{
 			Base:        base,
@@ -137,7 +138,7 @@ func New(
 		result = e
 
 	case xdr.OperationTypeReviewPaymentRequest:
-		d := row.GetDetails().ReviewPaymentRequest
+		d := details.ReviewPaymentRequest
 
 		e := ReviewPaymentRequest{
 			Base:         base,
@@ -153,7 +154,7 @@ func New(
 		result = e
 
 	case xdr.OperationTypeDirectDebit:
-		d := row.GetDetails().DirectDebit
+		d := details.DirectDebit
 		e := DirectDebit{
 			Base:                  base,
 			From:                  d.From,
@@ -183,7 +184,7 @@ func New(
 		result = e
 
 	case xdr.OperationTypeManageInvoice:
-		d := row.GetDetails().ManageInvoice
+		d := details.ManageInvoice
 		e := ManageInvoice{
 			Base:            base,
 			Amount:          d.Amount,
@@ -199,7 +200,7 @@ func New(
 		result = e
 
 	case xdr.OperationTypeManageAsset:
-		d := row.GetDetails().ManageAsset
+		d := details.ManageAsset
 
 		e := ManageAsset{
 			Base:      base,
@@ -210,7 +211,7 @@ func New(
 		result = e
 
 	case xdr.OperationTypeManageOffer:
-		d := row.GetDetails().ManagerOffer
+		d := details.ManagerOffer
 		e := ManagerOffer{
 			Base:      base,
 			IsBuy:     d.IsBuy,
@@ -222,7 +223,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeManageAssetPair:
-		d := row.GetDetails().ManageAssetPair
+		d := details.ManageAssetPair
 		e := ManageAssetPair{
 			Base:                    base,
 			BaseAsset:               d.BaseAsset,
@@ -234,7 +235,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeCreateIssuanceRequest:
-		d := row.GetDetails().CreateIssuanceRequest
+		d := details.CreateIssuanceRequest
 		e := CreateIssuanceRequest{
 			Base:            base,
 			Reference:       d.Reference,
@@ -250,7 +251,7 @@ func New(
 		}
 		result = e
 	case xdr.OperationTypeReviewRequest:
-		d := row.GetDetails().ReviewRequest
+		d := details.ReviewRequest
 
 		e := ReviewRequest{
 			Base:        base,
