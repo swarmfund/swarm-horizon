@@ -110,13 +110,13 @@ var messages = map[string]string{
 	"op_exceeds_max_issuance_amount":                 "Maximal issuance amount will be exceeded after issuance",
 	"op_receiver_full_line":                          "Total funds of receiver will exceed UINT64_MAX after issuance",
 	"op_fee_exceeds_amount":                          "Fee is more than amount to issue",
-	"op_order_book_does_not_exists":                  "Specified IO does not exists or already closed",
+	"op_order_book_does_not_exist":                   "Specified IO does not exist or already closed",
 	"op_sale_is_not_started_yet":                     "IO has not been started yet",
 	"op_sale_already_ended":                          "IO already ended",
-	"op_order_violates_hard_cap":                     "Offer violates hard cap restriction of the IO",
-	"op_cant_participate_own_sale":                   "Can not participate in the own IO",
+	"op_order_exceeds_hard_cap":                      "Offer exceeds hard cap restriction of the IO",
+	"op_cannot_participate_own_sale":                 "Cannot participate in the own IO",
 	"op_asset_mismatched":                            "Assets mismatched",
-	"op_price_does_not_match":                        "Prices does not match",
+	"op_price_mismatched":                            "Prices mismatched",
 	"op_insufficient_preissued":                      "Insufficient amount of tokens available for issuance",
 	"op_not_verified_cannot_have_policies":           "Not verified account can not have policies",
 	"op_price_is_invalid":                            "Price is invalid in some way",
@@ -141,6 +141,8 @@ var messages = map[string]string{
 	"op_requestor_is_blocked":                        "Requestor is blocked",
 	"op_version_is_not_supported_yet":                "Version of this operation is not supported yet",
 	"op_balance_already_exists":                      "Balance already exists",
+	"op_offer_not_found":                             "Offer does not exist in core database",
+	"op_offer_update_is_not_allowed":                 "Offer update is not allowed",
 }
 
 func getMessage(rawCode string) string {
