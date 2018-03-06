@@ -150,12 +150,18 @@ func (is *Session) operationDetails() map[string]interface{} {
 		details["policies_i"] = int32(op.Policies)
 	case xdr.OperationTypeManageOffer:
 		op := c.Operation().Body.ManageOfferOp
+		opResult := c.OperationResult().MustManageOfferResult()
 		details["is_buy"] = op.IsBuy
 		details["amount"] = amount.String(int64(op.Amount))
 		details["price"] = amount.String(int64(op.Price))
 		details["fee"] = amount.String(int64(op.Fee))
 		details["offer_id"] = op.OfferId
-		details["is_deleted"] = int64(op.OfferId) != 0
+		isDeleted := int64(op.OfferId) != 0
+		details["is_deleted"] = isDeleted
+		if isDeleted {
+			details["base_amount_released"] = amount.String(int64(opResult.Success.Offer.TotalAmount.BaseAmount))
+			details["quote_amount_released"] = amount.String(int64(opResult.Success.Offer.TotalAmount.QuoteAmount))
+		}
 	case xdr.OperationTypeManageInvoice:
 		op := c.Operation().Body.MustManageInvoiceOp()
 		opResult := c.OperationResult().MustManageInvoiceResult()
