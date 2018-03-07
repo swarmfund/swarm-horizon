@@ -143,6 +143,7 @@ var messages = map[string]string{
 	"op_balance_already_exists":                      "Balance already exists",
 	"op_offer_not_found":                             "Offer does not exist in core database",
 	"op_offer_update_is_not_allowed":                 "Offer update is not allowed",
+	"op_requires_is_buy":                             "Offers, related to sales must have isBuy set to true",
 }
 
 func getMessage(rawCode string) string {

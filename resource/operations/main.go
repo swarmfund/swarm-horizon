@@ -1,8 +1,6 @@
 package operations
 
 import (
-	"fmt"
-
 	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2/history"
 	"gitlab.com/swarmfund/horizon/render/hal"
@@ -14,9 +12,6 @@ import (
 func New(
 	ctx context.Context, row history.Operation, participants []*history.Participant, public bool,
 ) (result hal.Pageable, err error) {
-
-	fmt.Printf("%#v\n", row)
-	fmt.Printf("%#v\n", participants)
 	base := Base{}
 	err = base.Populate(ctx, row, participants, public)
 	if err != nil {
@@ -194,6 +189,5 @@ type ManagerOffer struct {
 	Fee         string `json:"fee"`
 	OfferId     int64  `json:"offer_id"`
 	IsDeleted   bool   `json:"is_deleted"`
-	BaseAmount  string `json:"base_amount_released"`
-	QuoteAmount string `json:"quote_amount_released"`
+	QuoteAmount string `json:"quote_amount"`
 }

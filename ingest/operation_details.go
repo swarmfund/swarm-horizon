@@ -159,8 +159,8 @@ func (is *Session) operationDetails() map[string]interface{} {
 		isDeleted := int64(op.OfferId) != 0
 		details["is_deleted"] = isDeleted
 		if isDeleted {
-			details["base_amount_released"] = amount.String(int64(opResult.Success.Offer.TotalAmount.BaseAmount))
-			details["quote_amount_released"] = amount.String(int64(opResult.Success.Offer.TotalAmount.QuoteAmount))
+			details["amount"] = amount.String(int64(opResult.Success.Offer.TotalAmount.BaseAmount))
+			details["quote_amount"] = amount.String(int64(opResult.Success.Offer.TotalAmount.QuoteAmount))
 		}
 	case xdr.OperationTypeManageInvoice:
 		op := c.Operation().Body.MustManageInvoiceOp()
