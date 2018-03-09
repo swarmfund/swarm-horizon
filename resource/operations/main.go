@@ -98,6 +98,10 @@ func New(
 			e.ExternalDetails = nil
 		}
 		result = e
+	case xdr.OperationTypeManageSale:
+		e := ManageSale{Base: base}
+		err = row.UnmarshalDetails(&e)
+		result = e
 	default:
 		result = base
 	}

@@ -195,6 +195,10 @@ func (is *Session) operationDetails() map[string]interface{} {
 		// no details needed
 	case xdr.OperationTypeCheckSaleState:
 		// no details needed
+	case xdr.OperationTypeManageSale:
+		op := c.Operation().Body.MustManageSaleOp()
+		details["sale_id"] = uint64(op.SaleId)
+		details["action"] = int32(op.Action)
 	default:
 		panic(fmt.Errorf("Unknown operation type: %s", c.OperationType()))
 	}

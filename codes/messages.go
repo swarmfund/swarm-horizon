@@ -141,6 +141,10 @@ var messages = map[string]string{
 	"op_requestor_is_blocked":                        "Requestor is blocked",
 	"op_version_is_not_supported_yet":                "Version of this operation is not supported yet",
 	"op_balance_already_exists":                      "Balance already exists",
+	"op_sale_is_blocked":                             "Sale already blocked",
+	"op_sale_is_unblocked":                           "Sale already unblocked",
+	"op_already_blocked":                             "Already blocked",
+	"op_already_unblocked":                           "Already unblocked",
 }
 
 func getMessage(rawCode string) string {

@@ -121,6 +121,8 @@ func ForOperation(
 		}
 
 		sourceParticipant = nil
+	case xdr.OperationTypeManageSale:
+		// the only direct participant is the source_account
 	default:
 		err = fmt.Errorf("unknown operation type: %s", op.Body.Type)
 	}
