@@ -10,6 +10,7 @@ import (
 	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2"
 	"gitlab.com/swarmfund/horizon/db2/history"
+	"gitlab.com/swarmfund/horizon/utf8"
 )
 
 func reviewableRequestCreate(is *Session, ledgerEntry *xdr.LedgerEntry) error {
@@ -71,7 +72,7 @@ func convertReviewableRequest(request *xdr.ReviewableRequestEntry, ledgerCloseTi
 	var reference *string
 	if request.Reference != nil {
 		reference = new(string)
-		*reference = string(*request.Reference)
+		*reference = utf8.Scrub(string(*request.Reference))
 	}
 
 	details, err := getReviewableRequestDetails(&request.Body)
@@ -171,6 +172,14 @@ func getWithdrawalRequest(request *xdr.WithdrawalRequest) history.WithdrawalRequ
 	}
 }
 
+func getAmlAlertRequest(request *xdr.AmlAlertRequest) history.AmlAlertRequest {
+	return history.AmlAlertRequest{
+		BalanceID: request.BalanceId.AsString(),
+		Amount:    amount.StringU(uint64(request.Amount)),
+		Reason:    string(request.Reason),
+	}
+}
+
 func getSaleRequest(request *xdr.SaleCreationRequest) history.SaleRequest {
 	var quoteAssets []history.SaleQuoteAsset
 	for i := range request.QuoteAssets {
@@ -208,6 +217,30 @@ func getLimitsUpdateRequest(request *xdr.LimitsUpdateRequest) history.LimitsUpda
 	}
 }
 
+func getUpdateKYCRequest(request *xdr.UpdateKycRequest) history.UpdateKYCRequest {
+	var kycData map[string]interface{}
+	// error is ignored on purpose, we should not block ingest in case of such error
+	_ = json.Unmarshal([]byte(request.KycData), &kycData)
+
+	var externalDetails []map[string]interface{}
+	for _, item := range request.ExternalDetails {
+		var comment map[string]interface{}
+		_ = json.Unmarshal([]byte(item), &comment)
+		externalDetails = append(externalDetails, comment)
+	}
+
+	return history.UpdateKYCRequest{
+		AccountToUpdateKYC: request.AccountToUpdateKyc.Address(),
+		AccountTypeToSet:   request.AccountTypeToSet,
+		KYCLevel:           uint32(request.KycLevel),
+		KYCData:            kycData,
+		AllTasks:           uint32(request.AllTasks),
+		PendingTasks:       uint32(request.PendingTasks),
+		SequenceNumber:     uint32(request.SequenceNumber),
+		ExternalDetails:    externalDetails,
+	}
+}
+
 func getReviewableRequestDetails(body *xdr.ReviewableRequestEntryBody) ([]byte, error) {
 	var rawDetails interface{}
 	var err error
@@ -231,6 +264,10 @@ func getReviewableRequestDetails(body *xdr.ReviewableRequestEntryBody) ([]byte, 
 		rawDetails = getLimitsUpdateRequest(body.LimitsUpdateRequest)
 	case xdr.ReviewableRequestTypeTwoStepWithdrawal:
 		rawDetails = getWithdrawalRequest(body.TwoStepWithdrawalRequest)
+	case xdr.ReviewableRequestTypeAmlAlert:
+		rawDetails = getAmlAlertRequest(body.AmlAlertRequest)
+	case xdr.ReviewableRequestTypeUpdateKyc:
+		rawDetails = getUpdateKYCRequest(body.UpdateKycRequest)
 	default:
 		return nil, errors.From(errors.New("unexpected reviewable request type"), map[string]interface{}{
 			"request_type": body.Type.String(),
