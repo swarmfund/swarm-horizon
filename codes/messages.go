@@ -143,7 +143,7 @@ var messages = map[string]string{
 	"op_balance_already_exists":                      "Balance already exists",
 	"op_offer_not_found":                             "Offer does not exist in core database",
 	"op_offer_update_is_not_allowed":                 "Offer update is not allowed",
-	"op_requires_is_buy":                             "Offers, related to sales must have isBuy set to true",
+	"op_selling_not_allowed":                         "Cannot create selling offers for participation in sale",
 	"op_acc_to_update_does_not_exist":                "Account to update KYC data doesn't exist",
 	"op_request_exist":                               "Request already exists",
 	"op_same_acc_type_to_set":                        "Account type and kyc level are the same",
