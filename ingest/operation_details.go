@@ -176,11 +176,15 @@ func (is *Session) operationDetails() map[string]interface{} {
 		details["asset"] = string(opResult.Success.Asset)
 	case xdr.OperationTypeReviewRequest:
 		op := c.Operation().Body.MustReviewRequestOp()
-		details["action"] = int32(op.Action)
+		details["action"] = op.Action.ShortString()
 		details["reason"] = string(op.Reason)
 		details["request_hash"] = hex.EncodeToString(op.RequestHash[:])
 		details["request_id"] = uint64(op.RequestId)
-		details["request_type"] = int32(op.RequestDetails.RequestType)
+		details["request_type"] = op.RequestDetails.RequestType.ShortString()
+		if op.Action == xdr.ReviewRequestOpActionApprove {
+			details["is_fulfilled"] = hasDeletedReviewableRequest(c.OperationChanges())
+		}
+		details["details"]= getReviewRequestOpDetails(op.RequestDetails)
 	case xdr.OperationTypeManageAsset:
 		op := c.Operation().Body.MustManageAssetOp()
 		details["request_id"] = uint64(op.RequestId)
@@ -204,6 +208,10 @@ func (is *Session) operationDetails() map[string]interface{} {
 	case xdr.OperationTypeCreateSaleRequest:
 		// no details needed
 	case xdr.OperationTypeCheckSaleState:
+		op := c.Operation().Body.MustCheckSaleStateOp()
+		opResult := c.OperationResult().MustCheckSaleStateResult().MustSuccess()
+		details["sale_id"] = uint64(op.SaleId)
+		details["effect"] = opResult.Effect.Effect.String()
 		// no details needed
 	case xdr.OperationTypeCreateAmlAlert:
 		op := c.Operation().Body.MustCreateAmlAlertRequestOp()
@@ -231,4 +239,26 @@ func (is *Session) operationDetails() map[string]interface{} {
 		panic(fmt.Errorf("Unknown operation type: %s", c.OperationType()))
 	}
 	return details
+}
+
+func getReviewRequestOpDetails(requestDetails xdr.ReviewRequestOpRequestDetails) map[string]interface{} {
+	return map[string]interface{}{
+		"request_type": requestDetails.RequestType.ShortString(),
+		"update_kyc": getUpdateKYCDetails(requestDetails.UpdateKyc),
+
+	}
+}
+
+func getUpdateKYCDetails(details *xdr.UpdateKycDetails) map[string]interface{} {
+	if details == nil {
+		return nil
+	}
+
+	var externalDetails map[string]interface{}
+	_ = json.Unmarshal([]byte(details.ExternalDetails), externalDetails)
+	return map[string]interface{} {
+		"external_details": externalDetails,
+		"tasks_to_add": uint32(details.TasksToAdd),
+		"tasks_to_remove": uint32(details.TasksToRemove),
+	}
 }

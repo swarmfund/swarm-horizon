@@ -14,7 +14,6 @@ import (
 	"gitlab.com/swarmfund/horizon/render/sse"
 	"gitlab.com/swarmfund/horizon/resource"
 	txsubHelper "gitlab.com/swarmfund/horizon/txsub"
-	"gitlab.com/swarmfund/horizon/actions"
 )
 
 // This file contains the actions:
@@ -91,12 +90,9 @@ func (action *TransactionIndexAction) loadParams() {
 
 	action.PagingParams = action.GetPageQuery()
 
-	limit := action.GetUInt64(actions.ParamLimit)
-	if limit > maxTxPagSize {
-		limit = maxTxPagSize
+	if action.PagingParams.Limit > maxTxPagSize {
+		action.PagingParams.Limit = maxTxPagSize
 	}
-
-	action.PagingParams.Limit = limit
 }
 
 func (action *TransactionIndexAction) loadRecords() {
@@ -162,17 +158,17 @@ func (action *TransactionIndexAction) checkAllowed() {
 // TransactionShowAction renders a ledger found by its sequence number.
 type TransactionShowAction struct {
 	Action
-	Hash     string
+	HashOrID string
 	Record   history.Transaction
 	Resource resource.Transaction
 }
 
 func (action *TransactionShowAction) loadParams() {
-	action.Hash = action.GetString("id")
+	action.HashOrID = action.GetString("id")
 }
 
 func (action *TransactionShowAction) loadRecord() {
-	action.Err = action.HistoryQ().TransactionByHash(&action.Record, action.Hash)
+	action.Err = action.HistoryQ().TransactionByHashOrID(&action.Record, action.HashOrID)
 }
 
 func (action *TransactionShowAction) loadResource() {
