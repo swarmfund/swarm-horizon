@@ -160,7 +160,7 @@ func (is *Session) operationDetails() map[string]interface{} {
 		details["price"] = amount.String(int64(op.Price))
 		details["fee"] = amount.String(int64(op.Fee))
 		details["offer_id"] = op.OfferId
-		isDeleted := int64(op.OfferId) != 0
+		isDeleted := int64(op.OfferId) != 0 && int64(op.Amount) == 0
 		details["is_deleted"] = isDeleted
 		if isDeleted {
 			details["amount"] = amount.String(int64(opResult.Success.Offer.TotalAmount.BaseAmount))
