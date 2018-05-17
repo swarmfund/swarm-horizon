@@ -3831,7 +3831,7 @@ func NewReviewableRequestEntryExt(v LedgerVersion, value interface{}) (result Re
 //    	uint64 requestID;
 //    	Hash hash; // hash of the request body
 //    	AccountID requestor;
-//    	string256 rejectReason;
+//    	longstring rejectReason;
 //    	AccountID reviewer;
 //    	string64* reference; // reference for request which will act as an unique key for the request (will reject request with the same reference from same requestor)
 //    	int64 createdAt; // when request was created
@@ -3874,7 +3874,7 @@ type ReviewableRequestEntry struct {
 	RequestId    Uint64                     `json:"requestID,omitempty"`
 	Hash         Hash                       `json:"hash,omitempty"`
 	Requestor    AccountId                  `json:"requestor,omitempty"`
-	RejectReason String256                  `json:"rejectReason,omitempty"`
+	RejectReason Longstring                 `json:"rejectReason,omitempty"`
 	Reviewer     AccountId                  `json:"reviewer,omitempty"`
 	Reference    *String64                  `json:"reference,omitempty"`
 	CreatedAt    Int64                      `json:"createdAt,omitempty"`
@@ -18575,7 +18575,7 @@ func NewReviewPaymentRequestOpExt(v LedgerVersion, value interface{}) (result Re
 //        uint64 paymentID;
 //
 //    	bool accept;
-//        string256* rejectReason;
+//        longstring* rejectReason;
 //    	// reserved for future use
 //    	union switch (LedgerVersion v)
 //    	{
@@ -18588,7 +18588,7 @@ func NewReviewPaymentRequestOpExt(v LedgerVersion, value interface{}) (result Re
 type ReviewPaymentRequestOp struct {
 	PaymentId    Uint64                    `json:"paymentID,omitempty"`
 	Accept       bool                      `json:"accept,omitempty"`
-	RejectReason *String256                `json:"rejectReason,omitempty"`
+	RejectReason *Longstring               `json:"rejectReason,omitempty"`
 	Ext          ReviewPaymentRequestOpExt `json:"ext,omitempty"`
 }
 
@@ -19540,7 +19540,7 @@ func NewReviewRequestOpExt(v LedgerVersion, value interface{}) (result ReviewReq
 //    		void;
 //    	} requestDetails;
 //    	ReviewRequestOpAction action;
-//    	string256 reason;
+//    	longstring reason;
 //    	// reserved for future use
 //        union switch (LedgerVersion v)
 //        {
@@ -19555,7 +19555,7 @@ type ReviewRequestOp struct {
 	RequestHash    Hash                          `json:"requestHash,omitempty"`
 	RequestDetails ReviewRequestOpRequestDetails `json:"requestDetails,omitempty"`
 	Action         ReviewRequestOpAction         `json:"action,omitempty"`
-	Reason         String256                     `json:"reason,omitempty"`
+	Reason         Longstring                    `json:"reason,omitempty"`
 	Ext            ReviewRequestOpExt            `json:"ext,omitempty"`
 }
 
@@ -22364,7 +22364,7 @@ func NewAmlAlertRequestExt(v LedgerVersion, value interface{}) (result AmlAlertR
 //   struct AMLAlertRequest {
 //        BalanceID balanceID;
 //        uint64 amount;
-//        string256 reason;
+//        longstring reason;
 //    	union switch (LedgerVersion v)
 //        {
 //        case EMPTY_VERSION:
@@ -22376,7 +22376,7 @@ func NewAmlAlertRequestExt(v LedgerVersion, value interface{}) (result AmlAlertR
 type AmlAlertRequest struct {
 	BalanceId BalanceId          `json:"balanceID,omitempty"`
 	Amount    Uint64             `json:"amount,omitempty"`
-	Reason    String256          `json:"reason,omitempty"`
+	Reason    Longstring         `json:"reason,omitempty"`
 	Ext       AmlAlertRequestExt `json:"ext,omitempty"`
 }
 
@@ -26658,7 +26658,8 @@ func (u PublicKey) GetEd25519() (result Uint256, ok bool) {
 //    	USE_PAYMENT_V2 = 16,
 //    	ALLOW_SYNDICATE_TO_UPDATE_KYC = 17,
 //    	DO_NOT_BUILD_ACCOUNT_IF_VERSION_EQUALS_OR_GREATER = 18,
-//    	ALLOW_TO_SPECIFY_REQUIRED_BASE_ASSET_AMOUNT_FOR_HARD_CAP = 19
+//    	ALLOW_TO_SPECIFY_REQUIRED_BASE_ASSET_AMOUNT_FOR_HARD_CAP = 19,
+//    	DETAILS_MAX_LENGTH_EXTENDED = 20
 //    };
 //
 type LedgerVersion int32
@@ -26684,6 +26685,7 @@ const (
 	LedgerVersionAllowSyndicateToUpdateKyc                       LedgerVersion = 17
 	LedgerVersionDoNotBuildAccountIfVersionEqualsOrGreater       LedgerVersion = 18
 	LedgerVersionAllowToSpecifyRequiredBaseAssetAmountForHardCap LedgerVersion = 19
+	LedgerVersionDetailsMaxLengthExtended                        LedgerVersion = 20
 )
 
 var LedgerVersionAll = []LedgerVersion{
@@ -26707,6 +26709,7 @@ var LedgerVersionAll = []LedgerVersion{
 	LedgerVersionAllowSyndicateToUpdateKyc,
 	LedgerVersionDoNotBuildAccountIfVersionEqualsOrGreater,
 	LedgerVersionAllowToSpecifyRequiredBaseAssetAmountForHardCap,
+	LedgerVersionDetailsMaxLengthExtended,
 }
 
 var ledgerVersionMap = map[int32]string{
@@ -26730,6 +26733,7 @@ var ledgerVersionMap = map[int32]string{
 	17: "LedgerVersionAllowSyndicateToUpdateKyc",
 	18: "LedgerVersionDoNotBuildAccountIfVersionEqualsOrGreater",
 	19: "LedgerVersionAllowToSpecifyRequiredBaseAssetAmountForHardCap",
+	20: "LedgerVersionDetailsMaxLengthExtended",
 }
 
 var ledgerVersionShortMap = map[int32]string{
@@ -26753,6 +26757,7 @@ var ledgerVersionShortMap = map[int32]string{
 	17: "allow_syndicate_to_update_kyc",
 	18: "do_not_build_account_if_version_equals_or_greater",
 	19: "allow_to_specify_required_base_asset_amount_for_hard_cap",
+	20: "details_max_length_extended",
 }
 
 var ledgerVersionRevMap = map[string]int32{
@@ -26776,6 +26781,7 @@ var ledgerVersionRevMap = map[string]int32{
 	"LedgerVersionAllowSyndicateToUpdateKyc":                       17,
 	"LedgerVersionDoNotBuildAccountIfVersionEqualsOrGreater":       18,
 	"LedgerVersionAllowToSpecifyRequiredBaseAssetAmountForHardCap": 19,
+	"LedgerVersionDetailsMaxLengthExtended":                        20,
 }
 
 // ValidEnum validates a proposed value for this enum.  Implements

@@ -345,7 +345,7 @@
   revision = "d7781cbc2319daf33ebc295e82281ee7368e5bd0"
 
 [[projects]]
-  branch = "feature/specify_required_hardcap"
+  branch = "feature/extend_details_length"
   name = "gitlab.com/tokend/go"
   packages = [
     "amount",
@@ -359,7 +359,7 @@
     "strkey",
     "xdr"
   ]
-  revision = "f669705b4ef17cdc3f51e821a6c4cccc2e68aff6"
+  revision = "ed64152b60772f47df5c9cded04705e05ea94595"
 
 [[projects]]
   branch = "master"
@@ -461,6 +461,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8725cf1b88bab609c2427742333314df240c2299335b7fff36a97b996966ef75"
+  inputs-digest = "357f5405bcfb992cb20890c964a0f4c6f90d176cb11628a62762214d8126c97a"
   solver-name = "gps-cdcl"
   solver-version = 1
