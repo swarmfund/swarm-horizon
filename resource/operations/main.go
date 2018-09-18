@@ -1,11 +1,9 @@
 package operations
 
 import (
-	"fmt"
-
-	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2/history"
 	"gitlab.com/swarmfund/horizon/render/hal"
+	"gitlab.com/tokend/go/xdr"
 	"golang.org/x/net/context"
 )
 
@@ -15,8 +13,6 @@ func New(
 	ctx context.Context, row history.Operation, participants []*history.Participant, public bool,
 ) (result hal.Pageable, err error) {
 
-	fmt.Printf("%#v\n", row)
-	fmt.Printf("%#v\n", participants)
 	base := Base{}
 	err = base.Populate(ctx, row, participants, public)
 	if err != nil {
@@ -29,6 +25,7 @@ func New(
 		if public {
 			e.Funder = ""
 			e.Account = ""
+			e.Referrer = nil
 		}
 		result = e
 	case xdr.OperationTypePayment:
@@ -57,6 +54,7 @@ func New(
 		if public {
 			if e.Fee != nil {
 				e.Fee.AccountID = ""
+				e.Fee.FeeAsset = ""
 			}
 		}
 		result = e
@@ -74,18 +72,13 @@ func New(
 			e.ExternalDetails = nil
 		}
 		result = e
-	case xdr.OperationTypeSetLimits:
-		e := SetLimits{Base: base}
+	case xdr.OperationTypeManageLimits:
+		e := ManageLimits{Base: base}
 		err = row.UnmarshalDetails(&e)
 		result = e
-	case xdr.OperationTypeManageInvoice:
-		e := ManageInvoice{Base: base}
+	case xdr.OperationTypeManageInvoiceRequest:
+		e := ManageInvoiceRequest{Base: base}
 		err = row.UnmarshalDetails(&e)
-		if public {
-			e.ReceiverBalance = ""
-			e.Sender = ""
-			e.RejectReason = nil
-		}
 		result = e
 	case xdr.OperationTypeManageOffer:
 		e := ManagerOffer{Base: base}
@@ -106,13 +99,44 @@ func New(
 		e := Payout{Base: base}
 		err = row.UnmarshalDetails(&e)
 		if public {
-			e.Asset = ""
 			e.SourceBalanceID = ""
-			e.MaxPayoutAmount = ""
-			e.ActualPayoutAmount = ""
 			e.FixedFee = ""
 			e.PercentFee = ""
 		}
+		result = e
+	case xdr.OperationTypeCheckSaleState:
+		e := CheckSaleState{Base: base}
+		err = row.UnmarshalDetails(&e)
+		result = e
+	case xdr.OperationTypeCreateAmlAlert:
+		e := CreateAmlAlert{Base: base}
+		err = row.UnmarshalDetails(&e)
+		if public {
+			e.BalanceID = ""
+		}
+		result = e
+	case xdr.OperationTypeCreateKycRequest:
+		e := CreateUpdateKYCRequest{Base: base}
+		err = row.UnmarshalDetails(&e)
+		if public {
+			e.KYCData = nil
+		}
+		result = e
+	case xdr.OperationTypeReviewRequest:
+		e := ReviewRequest{Base: base}
+		err = row.UnmarshalDetails(&e)
+		result = e
+	case xdr.OperationTypePaymentV2:
+		e := PaymentV2{Base: base}
+		err = row.UnmarshalDetails(&e)
+		result = e
+	case xdr.OperationTypeManageSale:
+		e := ManageSale{Base: base}
+		err = row.UnmarshalDetails(&e)
+		result = e
+	case xdr.OperationTypeManageAsset:
+		e := ManageAsset{Base: base}
+		err = row.UnmarshalDetails(&e)
 		result = e
 	default:
 		result = base
@@ -125,9 +149,10 @@ func New(
 // is CreateAccount.
 type CreateAccount struct {
 	Base
-	Funder      string `json:"funder,omitempty"`
-	Account     string `json:"account,omitempty"`
-	AccountType int32  `json:"account_type"`
+	Funder      string  `json:"funder,omitempty"`
+	Account     string  `json:"account,omitempty"`
+	AccountType int32   `json:"account_type"`
+	Referrer    *string `json:"referrer,omitempty"`
 }
 
 type BasePayment struct {
@@ -191,6 +216,7 @@ type Fee struct {
 	Subtype     int64  `json:"subtype"`
 	LowerBound  int64  `json:"lower_bound"`
 	UpperBound  int64  `json:"upper_bound"`
+	FeeAsset    string `json:"fee_asset"`
 }
 
 type SetFees struct {
@@ -200,10 +226,12 @@ type SetFees struct {
 
 type ManagerOffer struct {
 	Base
-	IsBuy     bool   `json:"is_buy"`
-	Amount    string `json:"amount"`
-	Price     string `json:"price"`
-	Fee       string `json:"fee"`
-	OfferId   int64  `json:"offer_id"`
-	IsDeleted bool   `json:"is_deleted"`
+	IsBuy       bool   `json:"is_buy"`
+	BaseAsset   string `json:"base_asset"`
+	Amount      string `json:"amount"`
+	Price       string `json:"price"`
+	Fee         string `json:"fee"`
+	OfferId     int64  `json:"offer_id"`
+	OrderBookID int64  `json:"order_book_id"`
+	IsDeleted   bool   `json:"is_deleted"`
 }

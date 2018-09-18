@@ -1,6 +1,6 @@
 package participants
 
-import "gitlab.com/swarmfund/go/xdr"
+import "gitlab.com/tokend/go/xdr"
 
 type PayoutResponse struct {
 	Receiver        xdr.AccountId

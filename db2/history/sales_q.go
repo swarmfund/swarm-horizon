@@ -27,15 +27,11 @@ type SalesQ interface {
 	Open(now time.Time) SalesQ
 	// Upcoming - selects only upcoming sales.
 	Upcoming(now time.Time) SalesQ
-	// CollectedValueBound - selects all sales in which the `current_cap` is above bound.
-	CollectedValueBound(bound int64) SalesQ
-	// CurrentSoftCapsRatio is selects all sales in which the `current_cap`
-	// is filled by more than a percentBound of the `soft_cap`.
-	CurrentSoftCapsRatio(percentBound int64) SalesQ
 	// OrderByEndTime is set ordering by `end_time`.
 	OrderByEndTime() SalesQ
-	// OrderByCurrentCap is set ordering by `current_cap`.
-	OrderByCurrentCap(desc bool) SalesQ
+	// OrderByStartTime is set ordering by `start_time`.
+	OrderByStartTime() SalesQ
+	OrderById(order string) SalesQ
 	// OrderByPopularity is merge with quantity of the
 	// unique investors for each sale, and sort sales by quantity.
 	OrderByPopularity(values db2.OrderBooksInvestors) SalesQ
@@ -47,8 +43,10 @@ type SalesQ interface {
 	SetState(saleID uint64, state SaleState) error
 	// Select - selects slice of Sales using specified filters
 	Select() ([]Sale, error)
-	// Page specifies the paging constraints for the query being built by `q`.
-	Page(page db2.PageQuery) SalesQ
+	// Voting - filters voting only
+	Voting() SalesQ
+	// Promotions - filters promotions only
+	Promotions() SalesQ
 }
 
 type saleQ struct {
@@ -110,39 +108,27 @@ func (q *saleQ) Upcoming(now time.Time) SalesQ {
 		return q
 	}
 
-	q.sql = q.sql.Where("start_time > ?", now)
+	q.sql = q.sql.Where("state = ? AND start_time > ?", SaleStateOpen, now)
 	return q
 }
 
-// CollectedValueBound - selects all sales in which the `current_cap` is above bound.
-func (q *saleQ) CollectedValueBound(bound int64) SalesQ {
+// Promotions - selects only promotion sales.
+func (q *saleQ) Promotions() SalesQ {
 	if q.Err != nil {
 		return q
 	}
 
-	q.sql = q.sql.Where("current_cap >= ?", bound)
+	q.sql = q.sql.Where("state = ?", SaleStatePromotion)
 	return q
 }
 
-// ReachedSoftCap - selects all sales in which the `current_cap` is above `soft_cap`.
-func (q *saleQ) ReachedSoftCap() SalesQ {
+// Voting - selects only voting sales.
+func (q *saleQ) Voting() SalesQ {
 	if q.Err != nil {
 		return q
 	}
 
-	q.sql = q.sql.Where("current_cap > soft_cap")
-	return q
-}
-
-// CurrentSoftCapsRatio is selects all sales in which the `current_cap` is filled by more than a percentBound of the `soft_cap`.
-func (q *saleQ) CurrentSoftCapsRatio(percentBound int64) SalesQ {
-	if q.Err != nil {
-		return q
-	}
-
-	q.sql = q.sql.
-		Where("div((current_cap * 100 ), soft_cap) > ?", percentBound)
-
+	q.sql = q.sql.Where("state = ?", SaleStateVoting)
 	return q
 }
 
@@ -171,11 +157,13 @@ func (q *saleQ) Insert(sale Sale) error {
 	sql := sq.Insert("sale").
 		Columns(
 			"id", "owner_id", "base_asset", "default_quote_asset", "start_time", "end_time",
-			"quote_assets", "soft_cap", "hard_cap", "current_cap", "details", "state",
+			"quote_assets", "soft_cap", "hard_cap", "details", "state", "base_current_cap",
+			"base_hard_cap, sale_type",
 		).
 		Values(
 			sale.ID, sale.OwnerID, sale.BaseAsset, sale.DefaultQuoteAsset, sale.StartTime, sale.EndTime,
-			sale.QuoteAssets, sale.SoftCap, sale.HardCap, sale.CurrentCap, sale.Details, sale.State,
+			sale.QuoteAssets, sale.SoftCap, sale.HardCap, sale.Details, sale.State,
+			sale.BaseCurrentCap, sale.BaseHardCap, sale.SaleType,
 		)
 
 	_, err := q.parent.Exec(sql)
@@ -197,9 +185,11 @@ func (q *saleQ) Update(sale Sale) error {
 		"quote_assets":        sale.QuoteAssets,
 		"soft_cap":            sale.SoftCap,
 		"hard_cap":            sale.HardCap,
-		"current_cap":         sale.CurrentCap,
 		"details":             sale.Details,
 		"state":               sale.State,
+		"base_hard_cap":       sale.BaseHardCap,
+		"base_current_cap":    sale.BaseCurrentCap,
+		"sale_type":           sale.SaleType,
 	}).Where("id = ?", sale.ID)
 
 	_, err := q.parent.Exec(sql)
@@ -247,6 +237,25 @@ func (q *saleQ) Page(page db2.PageQuery) SalesQ {
 	}
 
 	q.sql, q.Err = page.ApplyTo(q.sql, "sale.id")
+	return q
+}
+
+// OrderByEndTime is set ordering by `start_time`.
+func (q *saleQ) OrderByStartTime() SalesQ {
+	if q.Err != nil {
+		return q
+	}
+
+	q.sql = q.sql.OrderBy("start_time ASC")
+	return q
+}
+
+// OrderById assumes order were validate beforehand and it's value is one of db accepts
+func (q *saleQ) OrderById(order string) SalesQ {
+	if q.Err != nil {
+		return q
+	}
+	q.sql = q.sql.OrderBy(fmt.Sprintf("sale.id %s", order))
 	return q
 }
 
@@ -302,4 +311,4 @@ func (q *saleQ) ForBaseAssets(baseAssets ...string) SalesQ {
 
 var selectSales = sq.Select(
 	"id", "owner_id", "base_asset", "default_quote_asset", "start_time", "end_time", "quote_assets", "soft_cap", "hard_cap",
-	 "details", "state").From("sale")
+	"details", "state", "base_hard_cap", "base_current_cap, sale_type").From("sale")

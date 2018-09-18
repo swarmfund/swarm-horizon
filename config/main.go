@@ -56,16 +56,27 @@ type Config struct {
 	// for dev purposes only, works well with SkipCheck enabled
 	// pending transactions and transaction 2fa will be disabled as well.
 	DisableAPISubmit bool
+	// If set to true - Horizon won't check TFA (via API) during TX submission.
+	DisableTXTfa bool
 
-	TFA  TFA
 	Core Core
+
+	TemplateBackend *url.URL
+	InvestReady     *url.URL
+	TelegramAirdrop *url.URL
+
+	ForceHTTPSLinks bool
+
+	SentryDSN      string
+	Project        string
+	SentryLogLevel string
+	Env            string
+
+	MigrateUpOnStart bool
 }
 
 func (c *Config) DefineConfigStructure(cmd *cobra.Command) {
 	c.Base = NewBase(nil, "")
-
-	c.TFA.Base = NewBase(c.Base, "tfa")
-	c.TFA.DefineConfigStructure()
 
 	c.Core.Base = NewBase(c.Base, "core")
 	c.Core.DefineConfigStructure()
@@ -75,6 +86,11 @@ func (c *Config) DefineConfigStructure(cmd *cobra.Command) {
 	c.setDefault("history_retention_count", 0)
 	c.setDefault("sign_checkskip", false)
 	c.setDefault("log_level", "debug")
+	c.setDefault("force_https_links", true)
+	c.setDefault("sentry_dsn", "")
+	c.setDefault("project", "")
+	c.setDefault("sentry_log_level", "warn")
+	c.setDefault("env", "")
 
 	c.bindEnv("port")
 	c.bindEnv("database_url")
@@ -109,6 +125,13 @@ func (c *Config) DefineConfigStructure(cmd *cobra.Command) {
 	c.bindEnv("hostname")
 
 	c.bindEnv("disable_api_submit")
+
+	c.bindEnv("template_backend")
+	c.bindEnv("invest_ready")
+	c.bindEnv("telegram_airdrop")
+	c.bindEnv("disable_tx_tfa")
+	c.bindEnv("force_https_links")
+	c.bindEnv("migrate_up_on_start")
 }
 
 func (c *Config) Init() error {
@@ -159,8 +182,6 @@ func (c *Config) Init() error {
 
 	c.RedisURL = c.getString("redis_url")
 
-	c.TFA.Init()
-
 	err = c.Core.Init()
 	if err != nil {
 		return err
@@ -197,6 +218,29 @@ func (c *Config) Init() error {
 	}
 
 	c.DisableAPISubmit = c.getBool("disable_api_submit")
+	c.DisableTXTfa = c.getBool("disable_tx_tfa")
 
+	c.TemplateBackend, err = c.getParsedURL("template_backend")
+	if err != nil {
+		return errors.Wrap(err, "Failed to get template_backend value")
+	}
+
+	c.InvestReady, err = c.getParsedURL("invest_ready")
+	if err != nil {
+		return errors.Wrap(err, "Failed to get invest_ready value")
+	}
+
+	c.TelegramAirdrop, err = c.getOptionalParsedURL("telegram_airdrop")
+	if err != nil {
+		return errors.Wrap(err, "Failed to get telegram_airdrop value")
+	}
+
+	c.ForceHTTPSLinks = c.getBool("force_https_links")
+	c.SentryDSN = c.getString("sentry_dsn")
+	c.Project = c.getString("project")
+	c.SentryLogLevel = c.getString("sentry_log_level")
+
+	c.MigrateUpOnStart = c.getBool("migrate_up_on_start")
+	c.Env = c.getString("env")
 	return nil
 }

@@ -7,8 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/zenazn/goji/web"
-	"gitlab.com/swarmfund/go/signcontrol"
-	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/actions"
 	"gitlab.com/swarmfund/horizon/cache"
 	"gitlab.com/swarmfund/horizon/db2"
@@ -19,6 +17,10 @@ import (
 	"gitlab.com/swarmfund/horizon/log"
 	"gitlab.com/swarmfund/horizon/render/problem"
 	"gitlab.com/swarmfund/horizon/toid"
+	"gitlab.com/tokend/go/doorman"
+	"gitlab.com/tokend/go/resources"
+	"gitlab.com/tokend/go/signcontrol"
+	"gitlab.com/tokend/go/xdr"
 )
 
 // Action is the "base type" for all actions in horizon.  It provides
@@ -180,7 +182,7 @@ func (action *Action) Prepare(c web.C, w http.ResponseWriter, r *http.Request) {
 
 	base.SkipCheck = action.App.config.SkipCheck //pass config variable to base (since base can't read one)
 
-	base.Signer = r.Header.Get(signcontrol.PublicKeyHeader)
+	base.Signer, _ = signcontrol.CheckSignature(r)
 
 	if action.Ctx != nil {
 		action.Log = log.Ctx(action.Ctx)
@@ -305,9 +307,58 @@ func (action *Action) IsAccountSigner(accountId, signer string) *bool {
 	return isSigner
 }
 
+func getSystemAccountTypes() []xdr.AccountType {
+	return []xdr.AccountType{xdr.AccountTypeOperational, xdr.AccountTypeCommission, xdr.AccountTypeMaster}
+}
+
+func isSystemAccount(accountType int32) bool {
+	sysAccountTypes := getSystemAccountTypes()
+	for _, sysAccountType := range sysAccountTypes {
+		if accountType == int32(sysAccountType) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (action *Action) Doorman() doorman.Doorman {
+	return doorman.New(false, action)
+}
+
+// Signers used by doorman, basically just a connector to existing signers check logic
+func (action *Action) Signers(address string) ([]resources.Signer, error) {
+	// just to ensure backwards compatibility with checkAllowed
+	if address == "" {
+		address = action.App.CoreInfo.MasterAccountID
+	}
+	// get core account
+	account, err := action.CoreQ().Accounts().ByAddress(address)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get account")
+	}
+	// pass it to legacy routine
+	signers, err := action.GetSigners(account)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get account")
+	}
+	// convert structs
+	result := make([]resources.Signer, 0, len(signers))
+	for _, signer := range signers {
+		result = append(result, resources.Signer{
+			AccountID:  signer.Publickey,
+			Weight:     int(signer.Weight),
+			SignerType: int(signer.SignerType),
+			Identity:   int(signer.Identity),
+			Name:       signer.Name,
+		})
+	}
+	return result, nil
+}
+
 func (action *Action) GetSigners(account *core.Account) ([]core.Signer, error) {
-	// commission is managed by master account signers
-	if account.AccountType == int32(xdr.AccountTypeCommission) {
+	// all system accounts are managed by master account signers
+	if isSystemAccount(account.AccountType) && account.AccountType != int32(xdr.AccountTypeMaster) {
 		masterAccount, err := action.CoreQ().Accounts().ByAddress(action.App.CoreInfo.MasterAccountID)
 		if err != nil || masterAccount == nil {
 			if err == nil {
@@ -328,6 +379,17 @@ func (action *Action) GetSigners(account *core.Account) ([]core.Signer, error) {
 		return nil, err
 	}
 
+	if !isSystemAccount(account.AccountType) {
+		// add recovery signer
+		signers = append(signers, core.Signer{
+			Accountid:  account.RecoveryID,
+			Publickey:  account.RecoveryID,
+			Weight:     255,
+			SignerType: action.getMasterSignerType(),
+			Identity:   0,
+		})
+	}
+
 	// is master key allowed
 	if account.Thresholds[0] <= 0 {
 		return signers, nil
@@ -339,14 +401,6 @@ func (action *Action) GetSigners(account *core.Account) ([]core.Signer, error) {
 		Weight:     int32(account.Thresholds[0]),
 		SignerType: action.getMasterSignerType(),
 		Identity:   0,
-	})
-
-	signers = append(signers, core.Signer{
-		Accountid: account.RecoveryID,
-		Publickey: account.RecoveryID,
-		Weight:    255,
-		SignerType: action.getMasterSignerType(),
-		Identity:	0,
 	})
 
 	return signers, nil

@@ -1,8 +1,11 @@
 package horizon
 
 import (
+	"gitlab.com/distributed_lab/logan/v3/errors"
+	"gitlab.com/tokend/go/amount"
 	"gitlab.com/swarmfund/horizon/db2/core"
 	"gitlab.com/swarmfund/horizon/db2/history"
+	"gitlab.com/swarmfund/horizon/exchange"
 	"gitlab.com/swarmfund/horizon/render/hal"
 	"gitlab.com/swarmfund/horizon/render/problem"
 	"gitlab.com/swarmfund/horizon/resource"
@@ -13,8 +16,6 @@ type SaleShowAction struct {
 	Action
 	RequestID uint64
 	Record    *history.Sale
-	offers    []core.Offer
-	balances  []core.Balance
 	result    resource.Sale
 }
 
@@ -51,31 +52,58 @@ func (action *SaleShowAction) loadRecord() {
 		return
 	}
 
-	action.offers = make([]core.Offer, 0)
-	err = action.CoreQ().Offers().
-		ForOrderBookID(action.Record.ID).Select(&action.offers)
+	err = action.populateTotalCurrentCap()
 	if err != nil {
-		action.Log.WithError(err).
-			WithField("sale_id", action.Record.ID).
-			Error("failed to load offers for sale")
-		action.Err = &problem.ServerError
-		return
-	}
-
-	action.balances, err = action.CoreQ().Balances().
-		ByAsset(action.Record.BaseAsset).Select()
-	if err != nil {
-		action.Log.WithError(err).
-			WithField("sale_id", action.Record.ID).
-			Error("failed to load base asset balances for sale")
+		action.Log.WithError(err).Error("failed to populate total current cap")
 		action.Err = &problem.ServerError
 		return
 	}
 }
 
+func (action *SaleShowAction) populateTotalCurrentCap() error {
+	converter, err := exchange.NewConverter(action.CoreQ())
+	if err != nil {
+		return errors.Wrap(err, "failed to init converter")
+	}
+
+	totalCapInDefaultQuoteAsset, err := getCurrentCapInDefaultQuote(*action.Record, converter)
+	if err != nil {
+		return errors.Wrap(err, "failed to get current cap in default quote asset")
+	}
+
+	action.Record.CurrentCap = amount.String(totalCapInDefaultQuoteAsset)
+
+	for i := range action.Record.QuoteAssets.QuoteAssets {
+		quoteAsset := &action.Record.QuoteAssets.QuoteAssets[i]
+		totalCapInQuote, err := converter.TryToConvertWithOneHop(totalCapInDefaultQuoteAsset, action.Record.DefaultQuoteAsset, quoteAsset.Asset)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert total cap in default to quote")
+		}
+
+		if totalCapInQuote == nil {
+			return errors.New("failed to convert total cap in default to quote: failed to find path")
+		}
+
+		quoteAsset.TotalCurrentCap = amount.String(*totalCapInQuote)
+
+		hardCapInQuote, err := converter.TryToConvertWithOneHop(int64(action.Record.HardCap), action.Record.DefaultQuoteAsset, quoteAsset.Asset)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert hard cap")
+		}
+
+		if hardCapInQuote == nil {
+			return errors.New("failed to convert hard cap to quote asset")
+		}
+
+		quoteAsset.HardCap = amount.String(*hardCapInQuote)
+	}
+
+	return nil
+}
+
 func (action *SaleShowAction) populateResult() {
 	action.result.Populate(action.Record)
-	err := action.result.PopulateStat(action.offers, action.balances)
+	err := populateSaleWithStats(action.Record.ID, &action.result, action.CoreQ())
 	if err != nil {
 		action.Log.WithError(err).
 			WithField("request_id", action.RequestID).
@@ -83,4 +111,75 @@ func (action *SaleShowAction) populateResult() {
 		action.Err = &problem.ServerError
 		return
 	}
+}
+
+func populateSaleWithStats(saleID uint64, sale *resource.Sale, q core.QInterface) error {
+	var offers []core.Offer
+	err := q.Offers().ForOrderBookID(saleID).Select(&offers)
+	if err != nil {
+		return errors.Wrap(err, "failed to load offers for sale", map[string]interface{}{
+			"sale_id": saleID,
+		})
+	}
+
+	balances, err := q.Balances().ByAsset(sale.BaseAsset).Select()
+	if err != nil {
+		return errors.Wrap(err, "failed to load balances for sale's base asset", map[string]interface{}{
+			"sale_id": saleID,
+		})
+	}
+
+	err = sale.PopulateStat(offers, balances)
+	if err != nil {
+		return errors.Wrap(err, "failed to populate stats for sale", map[string]interface{}{
+			"sale_id": saleID,
+		})
+	}
+
+	return nil
+}
+
+func selectSalesWithCurrentCap(q history.SalesQ, converter *exchange.Converter) ([]history.Sale, error) {
+	result, err := q.Select()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load sales")
+	}
+
+	for i := range result {
+		currentCapInDefaultQuote, err := getCurrentCapInDefaultQuote(result[i], converter)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate current cap in default quote")
+		}
+
+		result[i].CurrentCap = amount.String(currentCapInDefaultQuote)
+	}
+
+	return result, nil
+}
+
+func getCurrentCapInDefaultQuote(sale history.Sale, converter *exchange.Converter) (int64, error) {
+	totalCapInDefaultQuoteAsset := int64(0)
+	for _, quoteAsset := range sale.QuoteAssets.QuoteAssets {
+		currentCap, err := amount.Parse(quoteAsset.CurrentCap)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to parse current cap")
+		}
+
+		currentCapInDefaultQuoteAsset, err := converter.TryToConvertWithOneHop(currentCap, quoteAsset.Asset, sale.DefaultQuoteAsset)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to convert current cap to default quote asset")
+		}
+
+		if currentCapInDefaultQuoteAsset == nil {
+			return 0, errors.New("failed to convert to current cap: no path found")
+		}
+
+		var isOk bool
+		totalCapInDefaultQuoteAsset, isOk = amount.SafePositiveSum(totalCapInDefaultQuoteAsset, *currentCapInDefaultQuoteAsset)
+		if !isOk {
+			return 0, errors.New("failed to find total cap in default quote asset: overflow")
+		}
+	}
+
+	return totalCapInDefaultQuoteAsset, nil
 }

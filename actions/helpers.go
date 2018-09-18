@@ -11,13 +11,14 @@ import (
 
 	"time"
 
-	"gitlab.com/swarmfund/go/amount"
-	"gitlab.com/swarmfund/go/strkey"
-	"gitlab.com/swarmfund/go/xdr"
+	"github.com/spf13/cast"
 	"gitlab.com/swarmfund/horizon/db2"
 	"gitlab.com/swarmfund/horizon/db2/core"
 	"gitlab.com/swarmfund/horizon/render/problem"
 	"gitlab.com/swarmfund/horizon/utils"
+	"gitlab.com/tokend/go/amount"
+	"gitlab.com/tokend/go/strkey"
+	"gitlab.com/tokend/go/xdr"
 )
 
 const (
@@ -56,6 +57,35 @@ func (base *Base) GetString(name string) string {
 	}
 
 	return base.R.URL.Query().Get(name)
+}
+
+func (base *Base) GetIntArray(name string) []int {
+	if base.Err != nil {
+		return nil
+	}
+
+	stringArray := base.R.URL.Query()[name]
+
+	res, err := getIntArrayFromStringArray(stringArray)
+	if err != nil {
+		base.SetInvalidField(name, err)
+		return nil
+	}
+
+	return res
+}
+
+func getIntArrayFromStringArray(input []string) (result []int, err error) {
+	for _, str := range input {
+		value, err := strconv.Atoi(str)
+		if err != nil {
+			return nil, errors.New("failed to convert to int from string")
+		}
+
+		result = append(result, value)
+	}
+
+	return
 }
 
 // GetNonEmptyString retrieves an string from the action parameter of the given name.
@@ -166,6 +196,20 @@ func (base *Base) GetInt64(name string) int64 {
 	return *result
 }
 
+func (base *Base) GetPositiveInt64(name string) int64 {
+	result := base.GetOptionalInt64(name)
+	if result == nil {
+		base.SetInvalidField(name, errors.New("must not be empty"))
+		return 0
+	}
+
+	if *result <= 0 {
+		base.SetInvalidField(name, errors.New("must be positive"))
+	}
+
+	return *result
+}
+
 func (base *Base) GetOptionalInt64(name string) *int64 {
 	if base.Err != nil {
 		return nil
@@ -253,17 +297,21 @@ func (base *Base) GetOptionalBool(name string) *bool {
 // GetInt32 retrieves an int32 from the action parameter of the given name.
 // Populates err if the value is not a valid int32
 func (base *Base) GetBool(name string) bool {
+	return base.GetBoolOrDefault(name, false)
+}
+
+// GetBoolOrDefault - returns boolean values passed, if parameter is not available or value is empty string - returns default value
+func (base *Base) GetBoolOrDefault(name string, defaultValue bool) bool {
 	if base.Err != nil {
 		return false
 	}
 
 	asStr := base.GetString(name)
-
-	if asStr == "true" {
-		return true
-	} else {
-		return false
+	if asStr == "" {
+		return defaultValue
 	}
+
+	return cast.ToBool(asStr)
 }
 
 // GetUInt64 retrieves an uint64 from the action parameter of the given name.

@@ -2,61 +2,65 @@ package reviewablerequest
 
 import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/swarmfund/go/xdr"
+	"gitlab.com/swarmfund/horizon/db2/history"
+	"gitlab.com/tokend/go/xdr"
+	"gitlab.com/tokend/regources"
 )
 
-// Details - provides specific for request type details.
-// Note: json key of specific request must be equal to xdr.ReviewableRequestType.ShortString result
-type Details struct {
-	RequestType
-	AssetCreation     *AssetCreationRequest `json:"asset_create,omitempty"`
-	AssetUpdate       *AssetUpdateRequest   `json:"asset_update,omitempty"`
-	PreIssuanceCreate *PreIssuanceRequest   `json:"pre_issuance_create,omitempty"`
-	IssuanceCreate    *IssuanceRequest      `json:"issuance_create,omitempty"`
-	Withdrawal        *WithdrawalRequest    `json:"withdraw,omitempty"`
-	TwoStepWithdrawal *WithdrawalRequest    `json:"two_step_withdrawal"`
-	Sale              *SaleCreationRequest  `json:"sale,omitempty"`
-	LimitsUpdate      *LimitsUpdateRequest  `json:"limits_update"`
-}
-
-func (d *Details) PopulateFromRawJSON(requestType xdr.ReviewableRequestType, rawJSON []byte) error {
-	d.RequestType.Populate(requestType)
-	err := d.PopulateSpecificRequest(requestType, rawJSON)
-	if err != nil {
-		return errors.Wrap(err, "failed to populate reviewable request details")
-	}
-
-	return nil
-}
-
-func (d *Details) PopulateSpecificRequest(requestType xdr.ReviewableRequestType, rawJSON []byte) error {
+func PopulateDetails(requestType xdr.ReviewableRequestType, h history.ReviewableRequestDetails) (
+	d *regources.ReviewableRequestDetails, err error,
+) {
+	d = &regources.ReviewableRequestDetails{}
+	d.RequestTypeName = requestType.ShortString()
+	d.RequestType = int32(requestType)
 	switch requestType {
 	case xdr.ReviewableRequestTypeAssetCreate:
-		d.AssetCreation = new(AssetCreationRequest)
-		return d.AssetCreation.PopulateFromRawJsonHistory(rawJSON)
+		d.AssetCreate, err = PopulateAssetCreationRequest(*h.AssetCreation)
+		return
 	case xdr.ReviewableRequestTypeAssetUpdate:
-		d.AssetUpdate = new(AssetUpdateRequest)
-		return d.AssetUpdate.PopulateFromRawJsonHistory(rawJSON)
+		d.AssetUpdate, err = PopulateAssetUpdateRequest(*h.AssetUpdate)
+		return
 	case xdr.ReviewableRequestTypePreIssuanceCreate:
-		d.PreIssuanceCreate = new(PreIssuanceRequest)
-		return d.PreIssuanceCreate.PopulateFromRawJsonHistory(rawJSON)
+		d.PreIssuanceCreate, err = PopulatePreIssuanceRequest(*h.PreIssuanceCreate)
+		return
 	case xdr.ReviewableRequestTypeIssuanceCreate:
-		d.IssuanceCreate = new(IssuanceRequest)
-		return d.IssuanceCreate.PopulateFromRawJsonHistory(rawJSON)
+		d.IssuanceCreate, err = PopulateIssuanceRequest(*h.IssuanceCreate)
+		return
 	case xdr.ReviewableRequestTypeWithdraw:
-		d.Withdrawal = new(WithdrawalRequest)
-		return d.Withdrawal.PopulateFromRawJsonHistory(rawJSON)
+		d.Withdraw, err = PopulateWithdrawalRequest(*h.Withdraw)
+		return
 	case xdr.ReviewableRequestTypeSale:
-		d.Sale = new(SaleCreationRequest)
-		return d.Sale.PopulateFromRawJsonHistory(rawJSON)
+		d.Sale, err = PopulateSaleCreationRequest(*h.Sale)
+		return
 	case xdr.ReviewableRequestTypeLimitsUpdate:
-		d.LimitsUpdate = new(LimitsUpdateRequest)
-		return d.LimitsUpdate.PopulateFromRawJsonHistory(rawJSON)
+		d.LimitsUpdate, err = PopulateLimitsUpdateRequest(*h.LimitsUpdate)
+		return
 	case xdr.ReviewableRequestTypeTwoStepWithdrawal:
-		d.TwoStepWithdrawal = new(WithdrawalRequest)
-		return d.TwoStepWithdrawal.PopulateFromRawJsonHistory(rawJSON)
+		d.TwoStepWithdraw, err = PopulateWithdrawalRequest(*h.TwoStepWithdraw)
+		return
+	case xdr.ReviewableRequestTypeAmlAlert:
+		d.AMLAlert, err = PopulateAmlAlertRequest(*h.AmlAlert)
+		return
+	case xdr.ReviewableRequestTypeUpdateKyc:
+		d.KYC, err = PopulateUpdateKYCRequest(*h.UpdateKYC)
+		return
+	case xdr.ReviewableRequestTypeUpdateSaleDetails:
+		d.UpdateSaleDetails, err = PopulateUpdateSaleDetailsRequest(*h.UpdateSaleDetails)
+		return
+	case xdr.ReviewableRequestTypeInvoice:
+		d.Invoice, err = PopulateInvoiceRequest(*h.Invoice)
+		return
+	case xdr.ReviewableRequestTypeUpdateSaleEndTime:
+		d.UpdateSaleEndTime, err = PopulateUpdateSaleEndTimeRequest(*h.UpdateSaleEndTimeRequest)
+		return
+	case xdr.ReviewableRequestTypeUpdatePromotion:
+		d.PromotionUpdateRequest, err = PopulatePromotionUpdateRequest(*h.PromotionUpdate)
+		return
+	case xdr.ReviewableRequestTypeContract:
+		d.Contract, err = PopulateContractRequest(*h.Contract)
+		return
 	default:
-		return errors.From(errors.New("unexpected reviewable request type"), map[string]interface{}{
+		return nil, errors.From(errors.New("unexpected reviewable request type"), map[string]interface{}{
 			"request_type": requestType.String(),
 		})
 	}

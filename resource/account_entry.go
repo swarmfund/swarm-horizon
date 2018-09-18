@@ -1,8 +1,9 @@
 package resource
 
 import (
-	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/resource/base"
+	"gitlab.com/tokend/go/xdr"
+	"gitlab.com/tokend/regources"
 )
 
 type AccountEntry struct {
@@ -10,8 +11,8 @@ type AccountEntry struct {
 	AccountTypeI  int32             `json:"account_type_i"`
 	AccountType   string            `json:"account_type"`
 	BlockReasonsI uint32            `json:"block_reasons_i"`
-	BlockReasons  []base.Flag       `json:"block_reasons"`
-	Limits        *Limits           `json:"limits"`
+	BlockReasons  []regources.Flag  `json:"block_reasons"`
+	LimitsV2      []LimitsV2        `json:"limits"`
 	Policies      AccountPolicies   `json:"policies"`
 	Signers       []Signer          `json:"signers"`
 	Thresholds    AccountThresholds `json:"thresholds"`
@@ -31,9 +32,6 @@ func (r *AccountEntry) Populate(entry xdr.AccountEntry) {
 	r.Policies.Populate(int32(entry.Policies))
 	r.Thresholds.Populate(entry.Thresholds)
 
-	if entry.Limits != nil {
-		r.Limits.FromXDR(*entry.Limits)
-	}
 	r.Signers = make([]Signer, 0)
 	for _, xSigner := range entry.Signers {
 		sgn := Signer{}

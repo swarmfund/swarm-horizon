@@ -34,7 +34,6 @@ type QInterface interface {
 	Accounts() AccountsQI
 	AccountByAddress(dest interface{}, addy string) error
 	AccountByID(dest interface{}, id int64) error
-	AccountSummary(address string, since, to *time.Time) ([]BalanceSummary, error)
 
 	Balances() BalancesQI
 	BalanceByID(dest interface{}, id string) error
@@ -50,10 +49,7 @@ type QInterface interface {
 	// Transactions
 	Transactions() TransactionsQI
 	TransactionByHash(dest interface{}, hash string) error
-
-	PaymentRequestByID(dest interface{}, requestID uint64) error
-	PaymentRequestByPaymentID(dest interface{}, requestID uint64) error
-	PaymentRequests() PaymentRequestsQI
+	TransactionByHashOrID(dest interface{}, hash string) error
 
 	// PendingTransactions
 
@@ -68,6 +64,14 @@ type QInterface interface {
 
 	// ReviewableRequests - provides builder of request to access reviewable requests
 	ReviewableRequests() ReviewableRequestQI
+
+	// LedgerChanges - provides builder to access ledger changes
+	LedgerChanges() LedgerChangesQI
+
+	//Contracts
+	Contracts() ContractQI
+	ContractsDetails() ContractsDetailsQI
+	ContractDispute() ContractDisputeQI
 }
 
 // ReviewableRequests - provides builder of request to access reviewable requests

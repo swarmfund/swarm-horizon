@@ -6,6 +6,7 @@ import (
 
 	"gitlab.com/swarmfund/horizon/db2"
 	"gitlab.com/swarmfund/horizon/db2/history"
+	"gitlab.com/swarmfund/horizon/exchange"
 	"gitlab.com/swarmfund/horizon/render/hal"
 	"gitlab.com/swarmfund/horizon/render/problem"
 	"gitlab.com/swarmfund/horizon/resource"
@@ -18,22 +19,23 @@ const (
 	SortTypeMostFounded
 	SortTypeByEndTime
 	SortTypeByPopularity
+	SortTypeStartTime
 )
 
 // SaleIndexAction renders slice of reviewable requests
 type SaleIndexAction struct {
 	Action
-	Owner                string
-	BaseAsset            string
-	OpenOnly             bool
-	Upcoming             bool
-	CurrentSoftCapsRatio *int64
-	CollectedValueBound  *int64
-	SortType             *int64
-	Name                 string
-	Records              []history.Sale
-	PagingParams         db2.PageQuery
-	Page                 hal.Page
+	Owner        string
+	BaseAsset    string
+	OpenOnly     bool
+	Upcoming     bool
+	Voting       bool
+	Promotions   bool
+	SortType     *int64
+	Name         string
+	Records      []history.Sale
+	PagingParams db2.PageQuery
+	Page         hal.Page
 }
 
 // JSON is a method for actions.JSON
@@ -55,21 +57,21 @@ func (action *SaleIndexAction) loadParams() {
 	action.BaseAsset = action.GetString("base_asset")
 	action.Name = action.GetString("name")
 
+	// TODO: refactoring required: switch to state
 	action.OpenOnly = action.GetBool("open_only")
 	action.Upcoming = action.GetBool("upcoming")
-
-	action.CurrentSoftCapsRatio = action.GetOptionalInt64("current_soft_caps_ratio")
-	action.CollectedValueBound = action.GetOptionalAmount("collected_value_bound")
+	action.Voting = action.GetBool("voting")
+	action.Promotions = action.GetBool("promotions")
 
 	action.SortType = action.GetOptionalInt64("sort_by")
 	action.Page.Filters = map[string]string{
-		"owner":                   action.Owner,
-		"base_asset":              action.BaseAsset,
-		"name":                    action.Name,
-		"open_only":               action.GetString("open_only"),
-		"upcoming":                action.GetString("upcoming"),
-		"collected_value_bound":   action.GetString("collected_value_bound"),
-		"current_soft_caps_ratio": action.GetString("current_soft_caps_ratio"),
+		"owner":      action.Owner,
+		"base_asset": action.BaseAsset,
+		"name":       action.Name,
+		"open_only":  action.GetString("open_only"),
+		"upcoming":   action.GetString("upcoming"),
+		"voting":     action.GetString("voting"),
+		"promotions": action.GetString("promotions"),
 	}
 }
 
@@ -96,12 +98,12 @@ func (action *SaleIndexAction) loadRecord() {
 		q = q.Upcoming(time.Now().UTC())
 	}
 
-	if action.CurrentSoftCapsRatio != nil {
-		q = q.CurrentSoftCapsRatio(*action.CurrentSoftCapsRatio)
+	if action.Voting {
+		q = q.Voting()
 	}
 
-	if action.CollectedValueBound != nil {
-		q = q.CollectedValueBound(*action.CollectedValueBound)
+	if action.Promotions {
+		q = q.Promotions()
 	}
 
 	sortBy := SortTypeDefaultPage
@@ -111,9 +113,9 @@ func (action *SaleIndexAction) loadRecord() {
 
 	switch sortBy {
 	case SortTypeDefaultPage:
-		q = q.Page(action.PagingParams)
-	case SortTypeMostFounded:
-		q = q.OrderByCurrentCap(true)
+		q = q.OrderById(action.PagingParams.Order)
+	case SortTypeStartTime:
+		q = q.OrderByStartTime()
 	case SortTypeByEndTime:
 		q = q.OrderByEndTime()
 	case SortTypeByPopularity:
@@ -129,8 +131,14 @@ func (action *SaleIndexAction) loadRecord() {
 		return
 	}
 
-	var err error
-	action.Records, err = q.Select()
+	converter, err := exchange.NewConverter(action.CoreQ())
+	if err != nil {
+		action.Log.WithError(err).Error("Failed to init converter")
+		action.Err = &problem.ServerError
+		return
+	}
+
+	action.Records, err = selectSalesWithCurrentCap(q, converter)
 	if err != nil {
 		action.Log.WithError(err).Error("failed to load sales")
 		action.Err = &problem.ServerError
@@ -142,6 +150,14 @@ func (action *SaleIndexAction) loadPage() {
 	for i := range action.Records {
 		var res resource.Sale
 		res.Populate(&action.Records[i])
+		err := populateSaleWithStats(action.Records[i].ID, &res, action.CoreQ())
+		if err != nil {
+			action.Log.WithError(err).
+				WithField("sale_id", action.Records[i].ID).
+				Error("failed to populate stat for sale")
+			action.Err = &problem.ServerError
+			return
+		}
 		action.Page.Add(&res)
 	}
 

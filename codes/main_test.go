@@ -3,8 +3,8 @@ package codes
 import (
 	"testing"
 
-	"gitlab.com/swarmfund/go/xdr"
 	. "github.com/smartystreets/goconvey/convey"
+	"gitlab.com/tokend/go/xdr"
 )
 
 func checkCode(t *testing.T, code shortStr) {
@@ -73,19 +73,14 @@ func TestCodes(t *testing.T) {
 			checkCode(t, code)
 		}
 	})
-	Convey("ReviewPaymentRequestResultCode", t, func() {
-		for _, code := range xdr.ReviewPaymentRequestResultCodeAll {
-			checkCode(t, code)
-		}
-	})
 	Convey("ManageAssetResultCode", t, func() {
 		for _, code := range xdr.ManageAssetResultCodeAll {
 			checkCode(t, code)
 		}
 	})
 
-	Convey("SetLimits", t, func() {
-		for _, code := range xdr.SetLimitsResultCodeAll {
+	Convey("ManageLimits", t, func() {
+		for _, code := range xdr.ManageLimitsResultCodeAll {
 			checkCode(t, code)
 		}
 	})
@@ -108,8 +103,8 @@ func TestCodes(t *testing.T) {
 		}
 	})
 
-	Convey("ManageInvoice", t, func() {
-		for _, code := range xdr.ManageInvoiceResultCodeAll {
+	Convey("ManageInvoiceRequest", t, func() {
+		for _, code := range xdr.ManageInvoiceRequestResultCodeAll {
 			checkCode(t, code)
 		}
 	})
@@ -128,6 +123,65 @@ func TestCodes(t *testing.T) {
 
 	Convey("Review request", t, func() {
 		for _, code := range xdr.ReviewRequestResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Manage external system account id pool entry", t, func() {
+		for _, code := range xdr.ManageExternalSystemAccountIdPoolEntryResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Bind external system account id", t, func() {
+		for _, code := range xdr.BindExternalSystemAccountIdResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+	Convey("Create KYC request", t, func() {
+		for _, code := range xdr.CreateUpdateKycRequestResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Payment V2", t, func() {
+		for _, code := range xdr.PaymentV2ResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Manage sale", t, func() {
+		for _, code := range xdr.ManageSaleResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Manage key value", t, func() {
+		for _, code := range xdr.ManageKeyValueResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Create manage limits request", t, func() {
+		for _, code := range xdr.ManageLimitsResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Manage contract request", t, func() {
+		for _, code := range xdr.ManageContractRequestResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Manage contract", t, func() {
+		for _, code := range xdr.ManageContractResultCodeAll {
+			checkCode(t, code)
+		}
+	})
+
+	Convey("Cancel sale request", t, func() {
+		for _, code := range xdr.CancelSaleCreationRequestResultCodeAll {
 			checkCode(t, code)
 		}
 	})

@@ -7,6 +7,7 @@ import (
 	"gitlab.com/swarmfund/horizon/render/hal"
 	"gitlab.com/swarmfund/horizon/render/problem"
 	"gitlab.com/swarmfund/horizon/resource"
+	"gitlab.com/tokend/regources"
 )
 
 // This file contains the actions:
@@ -16,8 +17,8 @@ import (
 // AccountShowAction renders a account summary found by its address.
 type AccountShowAction struct {
 	Action
-	Address     string
-	Resource    resource.Account
+	Address  string
+	Resource resource.Account
 }
 
 // JSON is a method for actions.JSON
@@ -26,9 +27,9 @@ func (action *AccountShowAction) JSON() {
 		action.loadParams,
 		action.checkAllowed,
 		action.loadRecord,
-		action.loadLimits,
 		action.loadBalances,
 		action.loadExternalSystemAccountIDs,
+		action.loadReferrals,
 		func() {
 			hal.Render(action.W, action.Resource)
 		},
@@ -47,7 +48,7 @@ func (action *AccountShowAction) loadRecord() {
 	coreRecord, err := action.CoreQ().
 		Accounts().
 		ForAddresses(action.Address).
-		WithStatistics().
+		WithAccountKYC().
 		First()
 
 	if err != nil {
@@ -61,8 +62,6 @@ func (action *AccountShowAction) loadRecord() {
 		return
 	}
 
-	coreRecord.Statistics.ClearObsolete(time.Now().UTC())
-
 	action.Resource.Populate(action.Ctx, *coreRecord)
 
 	signers, err := action.GetSigners(coreRecord)
@@ -73,17 +72,6 @@ func (action *AccountShowAction) loadRecord() {
 	}
 
 	action.Resource.Signers.Populate(signers)
-}
-
-func (action *AccountShowAction) loadLimits() {
-	limits, err := action.CoreQ().LimitsForAccount(action.Address, action.Resource.AccountTypeI)
-	if err != nil {
-		action.Log.WithError(err).Error("Failed to load limits for account")
-		action.Err = &problem.ServerError
-		return
-	}
-
-	action.Resource.Limits.Populate(limits)
 }
 
 func (action *AccountShowAction) loadBalances() {
@@ -107,8 +95,26 @@ func (action *AccountShowAction) loadExternalSystemAccountIDs() {
 		return
 	}
 
-	action.Resource.ExternalSystemAccounts = make([]resource.ExternalSystemAccountID, len(exSysIDs))
+	action.Resource.ExternalSystemAccounts = make([]regources.ExternalSystemAccountID, 0, len(exSysIDs))
 	for i := range exSysIDs {
-		action.Resource.ExternalSystemAccounts[i].Populate(exSysIDs[i])
+		if exSysIDs[i].ExpiresAt == nil || *exSysIDs[i].ExpiresAt >= time.Now().Unix() {
+			result := resource.PopulateExternalSystemAccountID(exSysIDs[i])
+			action.Resource.ExternalSystemAccounts = append(action.Resource.ExternalSystemAccounts, result)
+		}
+	}
+}
+
+func (action *AccountShowAction) loadReferrals() {
+	var coreReferrals []core.Account
+	err := action.CoreQ().Accounts().ForReferrer(action.Address).Select(&coreReferrals)
+	if err != nil {
+		action.Log.WithError(err).Error("Failed to load referrals")
+		action.Err = &problem.ServerError
+		return
+	}
+
+	action.Resource.Referrals = make([]resource.Referral, len(coreReferrals))
+	for i := range coreReferrals {
+		action.Resource.Referrals[i].Populate(coreReferrals[i])
 	}
 }

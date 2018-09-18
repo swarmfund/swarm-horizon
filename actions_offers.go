@@ -1,10 +1,7 @@
 package horizon
 
 import (
-	"strconv"
-
 	"github.com/go-errors/errors"
-	"gitlab.com/swarmfund/horizon/db2"
 	"gitlab.com/swarmfund/horizon/db2/core"
 	"gitlab.com/swarmfund/horizon/render/hal"
 	"gitlab.com/swarmfund/horizon/render/problem"
@@ -13,16 +10,17 @@ import (
 
 type OffersAction struct {
 	Action
-	AccountID    string
-	BaseAsset    string
-	QuoteAsset   string
-	IsBuy        *bool
-	PagingParams db2.PageQuery
-	OfferID      string
-	OrderBookID  *uint64
 
-	CoreRecords []core.Offer
-	Page        hal.Page
+	accountID         string
+	baseAsset         string
+	quoteAsset        string
+	isBuy             *bool
+	offerID           string
+	orderBookID       *uint64
+	onlyPrimaryMarket bool
+
+	coreRecords []core.Offer
+	page        hal.Page
 }
 
 // JSON is a method for actions.JSON
@@ -32,75 +30,61 @@ func (action *OffersAction) JSON() {
 		action.checkAllowed,
 		action.loadRecords,
 		func() {
-			hal.Render(action.W, action.Page)
+			hal.Render(action.W, action.page)
 		},
 	)
 }
 
 func (action *OffersAction) loadParams() {
-	action.AccountID = action.GetNonEmptyString("account_id")
-	action.BaseAsset = action.GetString("base_asset")
-	action.QuoteAsset = action.GetString("quote_asset")
-	action.IsBuy = action.GetOptionalBool("is_buy")
-	action.OfferID = action.GetString("offer_id")
-	action.OrderBookID = action.GetOptionalUint64("order_book_id")
-	if (action.BaseAsset == "") != (action.QuoteAsset == "") {
+	action.accountID = action.GetNonEmptyString("account_id")
+	action.baseAsset = action.GetString("base_asset")
+	action.quoteAsset = action.GetString("quote_asset")
+	action.isBuy = action.GetOptionalBool("is_buy")
+	action.offerID = action.GetString("offer_id")
+	action.orderBookID = action.GetOptionalUint64("order_book_id")
+	if (action.baseAsset == "") != (action.quoteAsset == "") {
 		action.SetInvalidField("base_asset", errors.New("base and quote assets must be both set or both not set"))
 		return
 	}
-	action.PagingParams = action.GetPageQuery()
-	action.Page.Filters = map[string]string{
-		"offer_id":      action.OfferID,
-		"base_asset":    action.BaseAsset,
-		"quote_asset":   action.QuoteAsset,
-		"order_book_id": action.GetString("order_book_id"),
-	}
 
-	if action.IsBuy != nil {
-		action.Page.Filters["is_buy"] = strconv.FormatBool(*action.IsBuy)
-	}
+	action.onlyPrimaryMarket = action.GetBool("only_primary")
 }
 
 func (action *OffersAction) checkAllowed() {
-	action.IsAllowed(action.AccountID)
+	action.IsAllowed(action.accountID)
 }
 
 func (action *OffersAction) loadRecords() {
-	q := action.CoreQ().Offers().ForAccount(action.AccountID)
-	if action.BaseAsset != "" {
-		q = q.ForAssets(action.BaseAsset, action.QuoteAsset)
+	q := action.CoreQ().Offers().ForAccount(action.accountID)
+	if action.baseAsset != "" {
+		q = q.ForAssets(action.baseAsset, action.quoteAsset)
 	}
 
-	if action.IsBuy != nil {
-		q = q.IsBuy(*action.IsBuy)
+	if action.isBuy != nil {
+		q = q.IsBuy(*action.isBuy)
 	}
 
-	if action.OfferID != "" {
-		q = q.ForOfferID(action.OfferID)
+	if action.offerID != "" {
+		q = q.ForOfferID(action.offerID)
 	}
 
-	if action.OrderBookID != nil {
-		q = q.ForOrderBookID(*action.OrderBookID)
+	if action.orderBookID != nil {
+		q = q.ForOrderBookID(*action.orderBookID)
 	}
 
-	err := q.Page(action.PagingParams).Select(&action.CoreRecords)
+	if action.onlyPrimaryMarket {
+		q = q.OnlyPrimaryMarket()
+	}
+
+	err := q.Select(&action.coreRecords)
 	if err != nil {
 		action.Log.WithError(err).Error("Failed to get offers from core DB")
 		action.Err = &problem.ServerError
 		return
 	}
 
-	for i := range action.CoreRecords {
-		var result resource.Offer
-		result.Populate(&action.CoreRecords[i])
-		action.Page.Add(&result)
+	action.page.Init()
+	for i := range action.coreRecords {
+		action.page.Add(resource.PopulateOffer(action.coreRecords[i]))
 	}
-
-	action.Page.BaseURL = action.BaseURL()
-	action.Page.BasePath = action.Path()
-	action.Page.Limit = action.PagingParams.Limit
-	action.Page.Cursor = action.PagingParams.Cursor
-	action.Page.Order = action.PagingParams.Order
-	action.Page.PopulateLinks()
-
 }

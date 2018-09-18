@@ -1,8 +1,12 @@
 package core
 
 import (
-	"gitlab.com/swarmfund/horizon/db2"
 	sq "github.com/lann/squirrel"
+	"gitlab.com/swarmfund/horizon/db2"
+)
+
+const (
+	secondaryMarketID = 0
 )
 
 type OfferQ struct {
@@ -42,6 +46,15 @@ func (q *OfferQ) ForOrderBookID(orderBookID uint64) *OfferQ {
 	}
 
 	q.sql = q.sql.Where("order_book_id = ?", orderBookID)
+	return q
+}
+
+func (q *OfferQ) OnlyPrimaryMarket() *OfferQ {
+	if q.Err != nil {
+		return q
+	}
+
+	q.sql = q.sql.Where("order_book_id <> ?", secondaryMarketID)
 	return q
 }
 
@@ -96,4 +109,5 @@ var selectOffer = sq.Select(
 	"o.base_balance_id",
 	"o.quote_balance_id",
 	"o.created_at",
+	"o.order_book_id",
 ).From("offer o")

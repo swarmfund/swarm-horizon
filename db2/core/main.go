@@ -5,8 +5,8 @@ package core
 import (
 	"github.com/jmoiron/sqlx"
 	sq "github.com/lann/squirrel"
-	"gitlab.com/swarmfund/go/xdr"
 	"gitlab.com/swarmfund/horizon/db2"
+	"gitlab.com/tokend/go/xdr"
 )
 
 // LedgerHeader is row of data from the `ledgerheaders` table
@@ -68,30 +68,35 @@ type QInterface interface {
 	FeeByTypeAssetAccount(feeType int, asset string, subtype int64, account *Account, amount int64) (*FeeEntry, error)
 	FeesByTypeAssetAccount(feeType int, asset string, subtype int64, account *Account) ([]FeeEntry, error)
 
-	// limits
-	AccountTypeLimits() AccountTypeLimitsQI
-	// tries to load limits for specific account, if not found loads for account type, if not found returns default
-	LimitsForAccount(accountID string, accountType int32) (Limits, error)
-	LimitsByAccountType(accountType int32) (*AccountTypeLimits, error)
-	// tries to load account limits, if not found returns nil, nil
-	LimitsByAddress(addy string) (*AccountLimits, error)
-
+	//LimitsV2 - creates new limitsV2 query helper
+	LimitsV2() LimitsV2QI
+	//StatisticsV2 - creates new statisticsV2 query helper
+	StatisticsV2() StatisticsV2QI
 	// Accounts - creates new accounts query helper
 	Accounts() AccountQI
 	// Assets - creates new assets query helper
 	Assets() AssetQI
+	// AccountKyc - creates new account_kyc query helper
+	AccountKYC() AccountKYCQI
 	// Balances - creates new balances query builder
 	Balances() BalancesQI
+	//KeyValue - creates new KeyValue query helper
+	KeyValue() KeyValueQI
 
 	Trusts() *TrustQ
 	Offers() *OfferQ
 	OrderBook() *OrderBookQ
+	Sales() *SaleQ
+	SaleAntes() *SaleAnteQ
 
 	// AssetPairs - creates new asset pair query helper
 	AssetPairs() AssetPairsQ
 
 	// ExternalSystemAccountID - returns builder to access external system account IDs
 	ExternalSystemAccountID() ExternalSystemAccountIDQI
+	ExternalSystemAccountIDPool() *ExternalSystemAccountIDPoolQ
+
+	References() *ReferenceQ
 }
 
 // PriceLevel represents an aggregation of offers to trade at a certain
@@ -175,6 +180,27 @@ func (q *Q) Assets() AssetQI {
 	}
 }
 
+func (q *Q) KeyValue() KeyValueQI {
+	return &KeyValueQ{
+		parent: q,
+		sql:    selectKeyValue,
+	}
+}
+
+func (q *Q) LimitsV2() LimitsV2QI {
+	return &LimitsV2Q{
+		parent: q,
+		sql:    selectLimitsV2,
+	}
+}
+
+func (q *Q) StatisticsV2() StatisticsV2QI {
+	return &StatisticsV2Q{
+		parent: q,
+		sql:    selectStatisticsV2,
+	}
+}
+
 // ExternalSystemAccountID - returns builder to access external system account IDs
 func (q *Q) ExternalSystemAccountID() ExternalSystemAccountIDQI {
 	return &externalSystemAccountIDQ{
@@ -189,4 +215,8 @@ func (q *Q) AssetPairs() AssetPairsQ {
 		parent: q,
 		sql:    selectAssetPair,
 	}
+}
+
+func (q *Q) ExternalSystemAccountIDPool() *ExternalSystemAccountIDPoolQ {
+	return NewExternalSystemAccountIDPoolQ(q)
 }
