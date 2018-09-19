@@ -309,13 +309,15 @@ func (is *Session) operationDetails() map[string]interface{} {
 		// no details needed
 	case xdr.OperationTypePayout:
 		op := c.Operation().Body.MustPayoutOp()
-		opResult := c.OperationResult().MustPayoutResult().PayoutSuccessResult
+		opResult := c.OperationResult().MustPayoutResult().Success
 		details["asset"] = op.Asset
 		details["source_balance_id"] = op.SourceBalanceId.AsString()
 		details["max_payout_amount"] = amount.StringU(uint64(op.MaxPayoutAmount))
 		details["actual_payout_amount"] = amount.StringU(uint64(opResult.ActualPayoutAmount))
-		details["fixed_fee"] = amount.StringU(uint64(op.Fee.Fixed))
-		details["percent_fee"] = amount.StringU(uint64(op.Fee.Percent))
+		details["min_payout_amount"] = amount.StringU(uint64(op.MinPayoutAmount))
+		details["min_asset_holder_amount"] = amount.StringU(uint64(op.MinAssetHolderAmount))
+		details["fixed_fee"] = amount.StringU(uint64(opResult.ActualFee.Fixed))
+		details["percent_fee"] = amount.StringU(uint64(opResult.ActualFee.Percent))
 	case xdr.OperationTypeCreateAmlAlert:
 		op := c.Operation().Body.MustCreateAmlAlertRequestOp()
 		details["amount"] = amount.StringU(uint64(op.AmlAlertRequest.Amount))

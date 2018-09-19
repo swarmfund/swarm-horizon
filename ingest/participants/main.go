@@ -9,6 +9,7 @@ import (
 	"gitlab.com/swarmfund/horizon/db2"
 	"gitlab.com/swarmfund/horizon/db2/core"
 	"gitlab.com/swarmfund/horizon/db2/history"
+	"gitlab.com/tokend/go/amount"
 	"gitlab.com/tokend/go/xdr"
 )
 
@@ -153,9 +154,14 @@ func ForOperation(
 		if payoutResponses == nil {
 			break
 		}
+
 		for _, response := range payoutResponses {
-			result = append(result, addPaymentResponse(response.ReceiverId, response.ReceiverBalanceId,
-				response.ReceivedAmount))
+			strAmount := amount.StringU(uint64(response.ReceivedAmount))
+			result = append(result, Participant{
+				AccountID: response.ReceiverId,
+				BalanceID: &response.ReceiverBalanceId,
+				Details:   &strAmount,
+			})
 		}
 	case xdr.OperationTypeManageExternalSystemAccountIdPoolEntry:
 		// the only direct participant is the source_account
@@ -241,12 +247,6 @@ func addMatchParticipants(participants []Participant, offerSourceID xdr.AccountI
 	}
 
 	return matchesByBalance.ToParticipants(participants)
-}
-
-func addPaymentResponse(receiverID xdr.AccountId, receiverBalanceID xdr.BalanceId,
-	receivedAmount xdr.Uint64) Participant {
-	payoutResponse := NewPayoutResponse(receiverID, receiverBalanceID, receivedAmount)
-	return payoutResponse.ToParticipant()
 }
 
 // ForTransaction returns all the participating accounts from the provided

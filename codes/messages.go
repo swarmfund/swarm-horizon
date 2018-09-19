@@ -223,7 +223,11 @@ var messages = map[string]string{
 	"op_contract_details_too_long":                      "Customer details has exceeded max contract details length",
 	"op_lower_bound_not_exceeded":                       "Requested amount to withdraw is too small",
 	"op_request_id_invalid":                             "Request id can not be equal zero",
-	"op_holders_not_found":                              "No holders found for the asset",
+	"op_holders_not_found":                              "There is no balances with such asset and total amount more than min",
+	"op_asset_not_transferable":                         "Asset must have transferable policy",
+	"op_fee_exceeds_actual_amount":                      "Fee more than actual amount to be payed",
+	"op_total_fee_overflow":                             "Unexpected state, sum of fixed and calculated fee exceeded max amount",
+	"op_min_amount_too_much":                            "There is no receivers which can receive more than minPayoutAmount",
 }
 
 func getMessage(rawCode string) string {
