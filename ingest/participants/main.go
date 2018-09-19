@@ -150,7 +150,7 @@ func ForOperation(
 		payoutOp := op.Body.MustPayoutOp()
 		sourceParticipant.BalanceID = &payoutOp.SourceBalanceId
 
-		payoutResponses := opResult.MustPayoutResult().MustPayoutSuccessResult().PayoutResponses
+		payoutResponses := opResult.MustPayoutResult().MustSuccess().PayoutResponses
 		if payoutResponses == nil {
 			break
 		}
