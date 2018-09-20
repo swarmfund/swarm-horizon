@@ -148,19 +148,27 @@ func ForOperation(
 		sourceParticipant = nil
 	case xdr.OperationTypePayout:
 		payoutOp := op.Body.MustPayoutOp()
+		payoutRes := opResult.MustPayoutResult().MustSuccess()
 		sourceParticipant.BalanceID = &payoutOp.SourceBalanceId
+		assetCode := obtainAssetCodeFromBalanceID(payoutOp.SourceBalanceId, ledgerChanges)
+		details := map[string]interface{}{}
+		details["payed_amount"] = amount.StringU(uint64(payoutRes.ActualPayoutAmount))
+		details["asset_code"] = assetCode
+		sourceParticipant.Details = &details
 
-		payoutResponses := opResult.MustPayoutResult().MustSuccess().PayoutResponses
+		payoutResponses := payoutRes.PayoutResponses
 		if payoutResponses == nil {
 			break
 		}
 
 		for _, response := range payoutResponses {
-			strAmount := amount.StringU(uint64(response.ReceivedAmount))
+			receiverDetails := map[string]interface{}{}
+			receiverDetails["received_amount"] = amount.StringU(uint64(response.ReceivedAmount))
+			receiverDetails["asset_code"] = assetCode
 			result = append(result, Participant{
 				AccountID: response.ReceiverId,
 				BalanceID: &response.ReceiverBalanceId,
-				Details:   &strAmount,
+				Details:   &receiverDetails,
 			})
 		}
 	case xdr.OperationTypeManageExternalSystemAccountIdPoolEntry:
@@ -376,4 +384,17 @@ func forMeta(
 	}
 
 	return
+}
+
+func obtainAssetCodeFromBalanceID(balanceID xdr.BalanceId, changes xdr.LedgerEntryChanges) string {
+	for _, c := range changes {
+		if c.Type == xdr.LedgerEntryChangeTypeUpdated {
+			data := c.MustUpdated().Data
+			if (data.Type == xdr.LedgerEntryTypeBalance) && (data.Balance != nil) {
+				return string(data.MustBalance().Asset)
+			}
+		}
+	}
+
+	return ""
 }
