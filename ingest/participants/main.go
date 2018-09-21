@@ -388,11 +388,18 @@ func forMeta(
 
 func obtainAssetCodeFromBalanceID(balanceID xdr.BalanceId, changes xdr.LedgerEntryChanges) string {
 	for _, c := range changes {
-		if c.Type == xdr.LedgerEntryChangeTypeUpdated {
-			data := c.MustUpdated().Data
-			if (data.Type == xdr.LedgerEntryTypeBalance) && (data.Balance != nil) {
-				return string(data.MustBalance().Asset)
-			}
+		if c.Type != xdr.LedgerEntryChangeTypeUpdated {
+			continue
+		}
+
+		data := c.MustUpdated().Data
+		if (data.Type != xdr.LedgerEntryTypeBalance) || (data.Balance == nil) {
+			continue
+		}
+
+		actualBalanceID := data.MustBalance().BalanceId
+		if actualBalanceID.AsString() == balanceID.AsString() {
+			return string(data.MustBalance().Asset)
 		}
 	}
 

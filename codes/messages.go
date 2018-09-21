@@ -227,7 +227,7 @@ var messages = map[string]string{
 	"op_asset_not_transferable":                         "Asset must have transferable policy",
 	"op_fee_exceeds_actual_amount":                      "Fee more than actual amount to be payed",
 	"op_total_fee_overflow":                             "Unexpected state, sum of fixed and calculated fee exceeded max amount",
-	"op_min_amount_too_much":                            "There is no receivers which can receive more than minPayoutAmount",
+	"op_min_amount_too_big":                             "There is no receivers which can receive more than minPayoutAmount",
 }
 
 func getMessage(rawCode string) string {
