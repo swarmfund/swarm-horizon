@@ -185,4 +185,10 @@ func TestCodes(t *testing.T) {
 			checkCode(t, code)
 		}
 	})
+
+	Convey("Payout", t, func() {
+		for _, code := range xdr.PayoutResultCodeAll {
+			checkCode(t, code)
+		}
+	})
 }

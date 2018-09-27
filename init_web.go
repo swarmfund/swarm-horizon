@@ -121,7 +121,7 @@ func initWebActions(app *App) {
 		xdr.OperationTypeCreateWithdrawalRequest,
 		xdr.OperationTypeManageOffer,
 		xdr.OperationTypeCheckSaleState,
-		xdr.OperationTypeManageKeyValue,
+		xdr.OperationTypePayout,
 		xdr.OperationTypePaymentV2,
 	}
 
