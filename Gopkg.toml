@@ -102,8 +102,8 @@
   branch = "master"
   name = "gitlab.com/distributed_lab/txsub"
 
-[[override]]
-  branch = "feature/cancel_sale_request"
+[[constraint]]
+  branch = "master"
   name = "gitlab.com/tokend/go"
 
 [[constraint]]
