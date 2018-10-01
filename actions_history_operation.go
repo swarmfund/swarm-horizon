@@ -22,7 +22,9 @@ type HistoryOperationIndexAction struct {
 	Types        []xdr.OperationType
 	PagingParams db2.PageQuery
 	Records      []history.Operation
+	Participants map[int64]*history.OperationParticipants
 	Page         hal.Page
+	AssetFilter  string
 }
 
 // JSON is a method for actions.JSON
@@ -30,6 +32,7 @@ func (action *HistoryOperationIndexAction) JSON() {
 	action.Do(
 		action.loadParams,
 		action.loadRecords,
+		action.loadParticipants,
 		action.loadPage,
 		func() {
 			hal.Render(action.W, action.Page)
@@ -38,11 +41,23 @@ func (action *HistoryOperationIndexAction) JSON() {
 }
 
 func (action *HistoryOperationIndexAction) loadParams() {
+	action.AssetFilter = action.GetString("asset")
 	action.PagingParams = action.GetPageQuery()
 }
 
 func (action *HistoryOperationIndexAction) loadRecords() {
-	err := action.HistoryQ().Operations().Page(action.PagingParams).Select(&action.Records)
+	ops := action.HistoryQ().Operations()
+
+	if action.AssetFilter != "" {
+		ops.JoinOnBalance().ForAsset(action.AssetFilter)
+	}
+
+	if len(action.Types) > 0 {
+		ops.ForTypes(action.Types)
+	}
+
+	err := ops.Page(action.PagingParams).Select(&action.Records)
+
 	if err != nil {
 		action.Log.WithError(err).Error("failed to get operations")
 		action.Err = &problem.ServerError
@@ -50,11 +65,77 @@ func (action *HistoryOperationIndexAction) loadRecords() {
 	}
 }
 
+// loadParticipants for this action is needed only for asset provenance feature
+func (action *HistoryOperationIndexAction) loadParticipants() {
+	isPublicAsset, err := action.isPublicAsset()
+	if err != nil {
+		action.Log.WithError(err).Error("failed to check if asset is public")
+		action.Err = &problem.ServerError
+		return
+	}
+	if !isPublicAsset {
+		return
+	}
+
+	// initializing our operation -> participants map
+	action.Participants = map[int64]*history.OperationParticipants{}
+	for _, operation := range action.Records {
+		if operation.Type != xdr.OperationTypeManageOffer {
+			continue
+		}
+		action.Participants[operation.ID] = &history.OperationParticipants{
+			operation.Type,
+			[]*history.Participant{},
+		}
+	}
+
+	// workaround for load participants
+	action.IsAdmin = true
+	action.LoadParticipants("", action.Participants)
+	// reverting workaround, just in case
+	action.IsAdmin = false
+}
+
+// isPublicAsset checks for asset details to ensure if it's allowed to expose manageOfferParticipants. Client-app
+// defines if the asset is public.
+func (action *HistoryOperationIndexAction) isPublicAsset() (bool, error) {
+	// provenance is considered to be used only when we need to get the trace for specific asset,
+	// so if no such filter is present we can omit populating participants
+	if action.AssetFilter == "" {
+		return false, nil
+	}
+
+	asset, err := action.CoreQ().Assets().ByCode(action.AssetFilter)
+	if err != nil {
+		return false, err
+	}
+	if asset == nil {
+		return false, nil
+	}
+
+	details, err := asset.GetDetails()
+	if err != nil {
+		return false, err
+	}
+
+	// isPublic field is being set by client-app
+	if details["isPublic"] != true {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (action *HistoryOperationIndexAction) loadPage() {
 	for _, record := range action.Records {
 		var res hal.Pageable
-
-		res, action.Err = resource.NewPublicOperation(action.Ctx, record, nil)
+		opParticipants := action.Participants[record.ID]
+		if opParticipants != nil {
+			// HACK: call `NewOperation` to expose participants ids for asset traceability.
+			res, action.Err = resource.NewOperation(action.Ctx, record, opParticipants.Participants)
+		} else {
+			res, action.Err = resource.NewPublicOperation(action.Ctx, record, nil)
+		}
 		if action.Err != nil {
 			return
 		}
